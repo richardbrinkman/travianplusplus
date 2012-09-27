@@ -27,11 +27,31 @@ function dorf1() {
 			"</div>";
 }
 
+function positionDetails() {
+	var tileDetails = document.getElementById("tileDetails");
+	if (tileDetails) {
+		var detailImage = tileDetails.getElementsByTagName("div");
+		if (detailImage.length>0) {
+			var options = detailImage[0].getElementsByTagName("div");
+			if (options.length>0)
+				options[0].innerHTML += 
+					"<div class=\"option\">"+
+						"<a onclick=\"addToFarmList()\" class=\"a arrow\" title=\"Voeg aan farmlijst toe\">Voeg aan farmlijst toe</a>"+
+					"</div>";
+		}
+	} else
+		window.alert("Geen tileDetails gevonden");
+}
+
 var uri = document.documentURI;
 var map = [
 	{
 		regexp: /http:\/\/ts4.travian.nl\/dorf1.php/,
 		func: dorf1
+	},
+	{
+		regexp: /http:\/\/ts4.travian.nl\/position_details.php/,
+		func: positionDetails
 	}
 ];
 for (i=0; i<map.length; i++)
