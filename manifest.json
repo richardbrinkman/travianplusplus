@@ -1,0 +1,10 @@
+{
+	"name": "travian++",
+	"version": "0.1",
+	"manifest_version": 2,
+	"description": "My first of building a Google Extension",
+	"content_scripts": [{
+		"matches": ["http://ts4.travian.nl/*"],
+		"js": ["farmlist.js"]
+	}]
+}
