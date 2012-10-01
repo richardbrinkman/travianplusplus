@@ -7,5 +7,6 @@
 		"matches": ["http://ts4.travian.nl/*"],
 		"js": ["farmlist.js"],
 		"run_at": "document_idle"
-	}]
+	}],
+	"permissions": ["storage"]	
 }
