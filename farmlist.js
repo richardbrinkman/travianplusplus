@@ -29,12 +29,9 @@ function dorf1() {
 					"</thead>"+
 					"<tbody>";
 		if (db.farms)
-			for (i=0; i<db.farms.length; i++) {
-				alert("Before: " + html);
+			for (i=0; i<db.farms.length; i++)
 				html +=
 					"<tr><td colspan=\"3\">" + db.farms[i].villageName + "</td></tr>";
-				alert("After: " + html);
-			}
 		html +=
 					"</tbody>"+
 				"</table>"+
