@@ -31,7 +31,7 @@ function dorf1() {
 		if (db.farms)
 			for (i=0; i<db.farms.length; i++)
 				html +=
-					"<tr><td colspan=\"3\">" + db.farms[i].villageName + "</td></tr>";
+					"<tr><td colspan=\"3\"><a href=\"http://ts4.travian.nl/position_details.php?x=" + db.farms[i].x + "&y=" + db.farms[i].y + "\">" + db.farms[i].villageName + "</a></td></tr>";
 		html +=
 					"</tbody>"+
 				"</table>"+
