@@ -1,3 +1,16 @@
+function delfarm(e) {
+	chrome.storage.sync.get(null, function(db) {
+		if (!db)
+			db = {};
+		if (!db.farms)
+			db.farms = [];
+		db.farms.splice(e.target.id,1);
+		chrome.storage.sync.set(db, function() {
+			window.location.href="http://ts4.travian.nl/dorf1.php";
+		});
+	});
+}
+
 function dorf1() {
 	chrome.storage.sync.get(null, function(db) {
 		var mapdetails = document.getElementById("map_details");
@@ -31,13 +44,26 @@ function dorf1() {
 		if (db.farms)
 			for (i=0; i<db.farms.length; i++)
 				html +=
-					"<tr><td colspan=\"3\"><a href=\"http://ts4.travian.nl/position_details.php?x=" + db.farms[i].x + "&y=" + db.farms[i].y + "\">" + db.farms[i].villageName + "</a></td></tr>";
+					"<tr>"+
+						"<td colspan=\"2\">"+
+							"<a href=\"http://ts4.travian.nl/position_details.php?x=" + db.farms[i].x + "&y=" + db.farms[i].y + "\">" + db.farms[i].villageName + "</a>"+
+						"</td>"+
+						"<td>"+
+							"<a>"+
+								"<img id=\"" + i + "\" src=\"img/x.gif\" class=\"del\">"+
+							"</a>"+
+						"</td>"+
+					"</tr>";
 		html +=
 					"</tbody>"+
 				"</table>"+
 			"</div>";
 		farms.innerHTML = html;
 		mapdetails.insertBefore(farms, clearDiv);
+		for (i=0; i<db.farms.length; i++) {
+			var link = document.getElementById(i);
+			link.onclick = delfarm;
+		}
 	});
 }
 
