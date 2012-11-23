@@ -154,8 +154,11 @@ function addgraphtab() {
 		//Give focus to Grafiek tab
 		graphtab.className="container active";
 
+		//Set the header
 		var content=document.getElementById("content");
 		content.getElementsByTagName("h4")[0].innerText="Grondstoffen grafiekjes";
+
+		//Remove the content
 		content.removeChild(document.getElementById("player"));
 		content.removeChild(document.getElementById("search_navi"));
 
@@ -170,10 +173,28 @@ function addgraphtab() {
 		var villageList=document.getElementById("villageListLinks");
 		var villages=villageList.getElementsByTagName("li");
 
+		//Iterate over all the villages
 		for (i=0; i<villages.length; i++) {
+			//Add village name as header
 			var villageHeader = document.createElement("h5");
 			villageHeader.innerText=villages[i].getElementsByTagName("a")[0].innerText;
 			content.insertBefore(villageHeader, cleardiv);
+
+			//Add the resources graph
+			var svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+			svg.setAttribute("version", "1.1");
+
+			//Draw axes
+			var group=document.createElementNS("http://www.w3.org/2000/svg","g");
+			group.setAttribute("fill", "none");
+			group.setAttribute("stroke", "black");
+			group.setAttribute("stroke-width", "3");
+			var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+			axis.setAttribute("d", "M0 0 l0 300 l550 0");
+			group.appendChild(axis);
+
+			svg.appendChild(group);
+			content.insertBefore(svg, cleardiv);
 		}
 	}
 }
