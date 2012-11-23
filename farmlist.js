@@ -119,6 +119,33 @@ function positionDetails() {
 	window.alert("Geen tileDetails gevonden");
 }
 
+function addgraphtab() {
+	var tabs = document.evaluate(
+		"//div[@class=\"contentNavi tabNavi \"]",
+		document,
+		null,
+		XPathResult.ANY_TYPE,
+		null
+	).iterateNext();
+	var cleartab = document.evaluate(
+		"./div[@class=\"clear\"]",
+		tabs,
+		null,
+		XPathResult.ANY_TYPE,
+		null
+	).iterateNext();
+	var graphtab = document.createElement("div");
+	graphtab.setAttributeNode(document.createAttribute("title"));
+	graphtab.className="container normal";
+	graphtab.innerHTML=
+		"<div class=\"background-start\">&nbsp;</div>" +
+		"<div class=\"background-end\">&nbsp;</div>" +
+		"<div class=\"content\">" +
+			"<a href=\"statistiken.php?id=0&idSub=4\" class=\"tabItem\">Grafiek</a>"+
+		"</div>";
+	tabs.insertBefore(graphtab, cleartab);
+}
+
 var uri = document.documentURI;
 var map = [
 	{
@@ -128,6 +155,10 @@ var map = [
 	{
 		regexp: /http:\/\/ts4.travian.nl\/position_details.php/,
 		func: positionDetails
+	},
+	{
+		regexp: /http:\/\/ts4.travian.nl\/statistiken.php/,
+		func: addgraphtab
 	}
 ];
 for (i=0; i<map.length; i++)

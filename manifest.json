@@ -6,7 +6,7 @@
 	"content_scripts": [{
 		"matches": ["http://ts4.travian.nl/*"],
 		"js": ["farmlist.js"],
-		"run_at": "document_idle"
+		"run_at": "document_end"
 	}],
 	"permissions": ["storage"]	
 }
