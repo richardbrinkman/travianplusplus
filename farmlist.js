@@ -145,11 +145,36 @@ function addgraphtab() {
 		"</div>";
 	tabs.insertBefore(graphtab, cleartab);
 	if (window.location.search == "?id=0&idSub=4") {
+		//Unfocus other tabs
 		var othertabs = tabs.getElementsByTagName("div");
 		for (i=0; i<4; i++)
 			if (othertabs[i].hasAttribute("title"))
 				othertabs[i].className="container normal";
+
+		//Give focus to Grafiek tab
 		graphtab.className="container active";
+
+		var content=document.getElementById("content");
+		content.getElementsByTagName("h4")[0].innerText="Grondstoffen grafiekjes";
+		content.removeChild(document.getElementById("player"));
+		content.removeChild(document.getElementById("search_navi"));
+
+		var cleardiv = document.evaluate(
+			"./div[@class=\"clear\"]",
+			content,
+			null,
+			XPathResult.ANY_TYPE,
+			null
+		).iterateNext();
+		
+		var villageList=document.getElementById("villageListLinks");
+		var villages=villageList.getElementsByTagName("li");
+
+		for (i=0; i<villages.length; i++) {
+			var villageHeader = document.createElement("h5");
+			villageHeader.innerText=villages[i].getElementsByTagName("a")[0].innerText;
+			content.insertBefore(villageHeader, cleardiv);
+		}
 	}
 }
 
