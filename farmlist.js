@@ -144,6 +144,13 @@ function addgraphtab() {
 			"<a href=\"statistiken.php?id=0&idSub=4\" class=\"tabItem\">Grafiek</a>"+
 		"</div>";
 	tabs.insertBefore(graphtab, cleartab);
+	if (window.location.search == "?id=0&idSub=4") {
+		var othertabs = tabs.getElementsByTagName("div");
+		for (i=0; i<4; i++)
+			if (othertabs[i].hasAttribute("title"))
+				othertabs[i].className="container normal";
+		graphtab.className="container active";
+	}
 }
 
 var uri = document.documentURI;
