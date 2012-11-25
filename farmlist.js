@@ -173,7 +173,14 @@ function addgraphtab() {
 		var villageList=document.getElementById("villageListLinks");
 		var villages=villageList.getElementsByTagName("li");
 
+		//Define dimensions
+		var height = 300;
+		var width = 520;
+		var bordermargin = 20;
+		var hours = 24;
+
 		//Iterate over all the villages
+		var graphs = [];
 		for (i=0; i<villages.length; i++) {
 			//Add village name as header
 			var villageHeader = document.createElement("h5");
@@ -181,34 +188,32 @@ function addgraphtab() {
 			villageHeader.innerText=villageLink.innerText;
 			content.insertBefore(villageHeader, cleardiv);
 
-			//Define dimensions
-			var height = 300;
-			var width = 520;
-			var bordermargin = 20;
-
 			//Add the resources graph
-			var svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-			svg.setAttribute("version", "1.1");
-			svg.setAttribute("width", width+bordermargin);
-			svg.setAttribute("height", height+bordermargin);
+			graphs[i] = {};
+			graphs[i].svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+			graphs[i].svg.setAttribute("version", "1.1");
+			graphs[i].svg.setAttribute("width", width+bordermargin);
+			graphs[i].svg.setAttribute("height", height+bordermargin);
+			graphs[i].svg.setAttribute("id", i);
 
 			//Draw axes
-			var group=document.createElementNS("http://www.w3.org/2000/svg","g");
-			group.setAttribute("id","axis");
-			group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
-			var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-			axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
-			group.appendChild(axis);
+			graphs[i].group=document.createElementNS("http://www.w3.org/2000/svg","g");
+			graphs[i].group.setAttribute("id","axis");
+			graphs[i].group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
+			graphs[i].axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+			graphs[i].axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
+			graphs[i].group.appendChild(graphs[i].axis);
 
-			var dorf1 = new XMLHttpRequest();
-			dorf1.responseType = "document"
-			dorf1.onreadystatechange = function() {
-				if (dorf1.readyState == 4) { //finished loading
+			graphs[i].dorf1 = new XMLHttpRequest();
+			graphs[i].dorf1.responseType = "document";
+			graphs[i].dorf1.graph=graphs[i];
+			graphs[i].dorf1.onreadystatechange = function() {
+				if (this.readyState == 4) { //finished loading
 					//Get resources
-					var wood = dorf1.response.getElementById("l1").innerText.split("/");
-					var clay = dorf1.response.getElementById("l2").innerText.split("/");
-					var iron = dorf1.response.getElementById("l3").innerText.split("/");
-					var crop = dorf1.response.getElementById("l4").innerText.split("/");
+					var wood = this.response.getElementById("l1").innerText.split("/");
+					var clay = this.response.getElementById("l2").innerText.split("/");
+					var iron = this.response.getElementById("l3").innerText.split("/");
+					var crop = this.response.getElementById("l4").innerText.split("/");
 
 					//Get capacities
 					var resourceCapacity = wood[1];
@@ -216,7 +221,7 @@ function addgraphtab() {
 					var capacity = resourceCapacity < cropCapacity ? cropCapacity : resourceCapacity;
 
 					//Get production
-					var production = dorf1.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+					var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 					var woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
 					var clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
 					var ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
@@ -225,7 +230,7 @@ function addgraphtab() {
 					//Define translate object
 					var translate = {
 						x: function(rx) {
-							return bordermargin + 0; //TODO parse time, etc.
+							return bordermargin + width*rx/hours; //TODO parse time, etc.
 						},
 						y: function(ry) {
 							return height - height*ry/capacity;
@@ -236,20 +241,20 @@ function addgraphtab() {
 					var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
 					resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none");
 					resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
-					svg.appendChild(resourceCapacityLine);
+					this.graph.svg.appendChild(resourceCapacityLine);
 					
 					//Draw crop capacity line
 					var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
 					cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none");
 					cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
-					svg.appendChild(cropCapacityLine);
+					this.graph.svg.appendChild(cropCapacityLine);
 				}	
 			};
-			dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
-			dorf1.send();
+			graphs[i].dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
+			graphs[i].dorf1.send();
 
-			svg.appendChild(group);
-			content.insertBefore(svg, cleardiv);
+			graphs[i].svg.appendChild(graphs[i].group);
+			content.insertBefore(graphs[i].svg, cleardiv);
 		}
 	}
 }
