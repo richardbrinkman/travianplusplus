@@ -177,7 +177,7 @@ function addgraphtab() {
 		var height = 300;
 		var width = 520;
 		var bordermargin = 20;
-		var hours = 24;
+		var hours = 48;
 
 		//Iterate over all the villages
 		var graphs = [];
@@ -195,14 +195,6 @@ function addgraphtab() {
 			graphs[i].svg.setAttribute("width", width+bordermargin);
 			graphs[i].svg.setAttribute("height", height+bordermargin);
 			graphs[i].svg.setAttribute("id", i);
-
-			//Draw axes
-			graphs[i].group=document.createElementNS("http://www.w3.org/2000/svg","g");
-			graphs[i].group.setAttribute("id","axis");
-			graphs[i].group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
-			graphs[i].axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-			graphs[i].axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
-			graphs[i].group.appendChild(graphs[i].axis);
 
 			graphs[i].dorf1 = new XMLHttpRequest();
 			graphs[i].dorf1.responseType = "document";
@@ -232,28 +224,52 @@ function addgraphtab() {
 						x: function(rx) {
 							return bordermargin + width*rx/hours; //TODO parse time, etc.
 						},
+						dy: function(ry) {
+							return -height*ry/capacity;
+						},
 						y: function(ry) {
-							return height - height*ry/capacity;
+							return height + this.dy(ry);
 						}
 					};
 
 					//Draw resource capacity line
 					var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-					resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none");
+					resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 10,10");
 					resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
 					this.graph.svg.appendChild(resourceCapacityLine);
 					
 					//Draw crop capacity line
 					var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-					cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none");
+					cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
 					cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
 					this.graph.svg.appendChild(cropCapacityLine);
+
+					//Draw projected resource levels
+					var resources = [
+						{resource: "wood", level: wood[0], growth: woodProduction, color: "green"},
+						{resource: "clay", level: clay[0], growth: clayProduction, color: "red"},
+						{resource: "iron", level: iron[0], growth: ironProduction, color: "gray"},
+						{resource: "crop", level: crop[0], growth: cropProduction, color: "yellow"}
+					];
+					for (var j=0; j<resources.length; j++) {
+						var line=document.createElementNS("http://www.w3.org/2000/svg","path");
+						line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
+						line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(resources[j].growth));
+						this.graph.svg.appendChild(line);
+					}
+
+					//Draw axes
+					var group=document.createElementNS("http://www.w3.org/2000/svg","g");
+					group.setAttribute("id","axis");
+					group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
+					var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+					axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
+					group.appendChild(axis);
+					this.graph.svg.appendChild(group);
 				}	
 			};
 			graphs[i].dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
 			graphs[i].dorf1.send();
-
-			graphs[i].svg.appendChild(graphs[i].group);
 			content.insertBefore(graphs[i].svg, cleardiv);
 		}
 	}
