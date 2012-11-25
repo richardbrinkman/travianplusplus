@@ -177,21 +177,75 @@ function addgraphtab() {
 		for (i=0; i<villages.length; i++) {
 			//Add village name as header
 			var villageHeader = document.createElement("h5");
-			villageHeader.innerText=villages[i].getElementsByTagName("a")[0].innerText;
+			var villageLink = villages[i].getElementsByTagName("a")[0];
+			villageHeader.innerText=villageLink.innerText;
 			content.insertBefore(villageHeader, cleardiv);
+
+			//Define dimensions
+			var height = 300;
+			var width = 520;
+			var bordermargin = 20;
 
 			//Add the resources graph
 			var svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
 			svg.setAttribute("version", "1.1");
+			svg.setAttribute("width", width+bordermargin);
+			svg.setAttribute("height", height+bordermargin);
 
 			//Draw axes
 			var group=document.createElementNS("http://www.w3.org/2000/svg","g");
-			group.setAttribute("fill", "none");
-			group.setAttribute("stroke", "black");
-			group.setAttribute("stroke-width", "3");
+			group.setAttribute("id","axis");
+			group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
 			var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-			axis.setAttribute("d", "M0 0 l0 300 l550 0");
+			axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
 			group.appendChild(axis);
+
+			var dorf1 = new XMLHttpRequest();
+			dorf1.responseType = "document"
+			dorf1.onloadend = function() {
+				//Get resources
+				var wood = dorf1.response.getElementById("l1").innerText.split("/");
+				var clay = dorf1.response.getElementById("l2").innerText.split("/");
+				var iron = dorf1.response.getElementById("l3").innerText.split("/");
+				var crop = dorf1.response.getElementById("l4").innerText.split("/");
+
+				//Get capacities
+				var resourceCapacity = wood[1];
+				var cropCapacity = crop[1];
+				var capacity = resourceCapacity < cropCapacity ? cropCapacity : resourceCapacity;
+
+				//Get production
+				var production = dorf1.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+				var woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
+				var clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
+				var ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
+				var cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
+
+				//Define translate object
+				var translate = {
+					x: function(rx) {
+						return bordermargin + 0; //TODO parse time, etc.
+					},
+					y: function(ry) {
+						return height - height*ry/capacity;
+					}
+				};
+
+				//Draw resource capacity line
+				var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+				resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none");
+				resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
+				svg.appendChild(resourceCapacityLine);
+				
+				//Draw crop capacity line
+				var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+				cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none");
+				cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
+				svg.appendChild(cropCapacityLine);
+				
+			};
+			dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
+			dorf1.send();
 
 			svg.appendChild(group);
 			content.insertBefore(svg, cleardiv);

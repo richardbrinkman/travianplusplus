@@ -8,5 +8,5 @@
 		"js": ["farmlist.js"],
 		"run_at": "document_end"
 	}],
-	"permissions": ["storage"]	
+	"permissions": ["http://ts4.travian.nl/", "storage"]
 }
