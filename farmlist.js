@@ -183,8 +183,8 @@ function addgraphtab() {
 		//Define dimensions
 		var height = 300;
 		var width = 520;
-		var bordermargin = 20;
-		var hours = 48;
+		var bordermargin = 5;
+		var hours = 24;
 
 		//Iterate over all the villages
 		var graphs = [];
@@ -221,15 +221,18 @@ function addgraphtab() {
 
 					//Get production
 					var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-					var woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
-					var clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
-					var ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
-					var cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/[^0-9]/g, "");
+					var woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+					var clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+					var ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+					var cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
 
 					//Define translate object
 					var translate = {
+						dx: function(rx) {
+							return width*rx/hours
+						},
 						x: function(rx) {
-							return bordermargin + width*rx/hours; //TODO parse time, etc.
+							return bordermargin + this.dx(rx); //TODO parse time, etc.
 						},
 						dy: function(ry) {
 							return -height*ry/capacity;
@@ -261,7 +264,7 @@ function addgraphtab() {
 					for (var j=0; j<resources.length; j++) {
 						var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 						line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-						line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(resources[j].growth));
+						line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(hours*resources[j].growth));
 						this.graph.svg.appendChild(line);
 					}
 
@@ -270,7 +273,10 @@ function addgraphtab() {
 					group.setAttribute("id","axis");
 					group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
 					var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-					axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0");
+					var ticks="M" + bordermargin + " " + height;
+					for (var j=0; j<hours; j++)
+						ticks += " m" + translate.dx(1) + " 0 l 0 " + bordermargin + " m 0 -" + bordermargin;
+					axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0 " + ticks);
 					group.appendChild(axis);
 					this.graph.svg.appendChild(group);
 				}	
