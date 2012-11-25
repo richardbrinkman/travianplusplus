@@ -119,6 +119,13 @@ function positionDetails() {
 	window.alert("Geen tileDetails gevonden");
 }
 
+function max(x,y) {
+	if (x<y)
+		return y;
+	else
+		return x;
+}
+
 function addgraphtab() {
 	var tabs = document.evaluate(
 		"//div[@class=\"contentNavi tabNavi \"]",
@@ -208,9 +215,9 @@ function addgraphtab() {
 					var crop = this.response.getElementById("l4").innerText.split("/");
 
 					//Get capacities
-					var resourceCapacity = wood[1];
-					var cropCapacity = crop[1];
-					var capacity = resourceCapacity < cropCapacity ? cropCapacity : resourceCapacity;
+					var resourceCapacity = parseInt(wood[1]);
+					var cropCapacity = parseInt(crop[1]);
+					var capacity = max(resourceCapacity, cropCapacity);
 
 					//Get production
 					var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
@@ -246,10 +253,10 @@ function addgraphtab() {
 
 					//Draw projected resource levels
 					var resources = [
-						{resource: "wood", level: wood[0], growth: woodProduction, color: "green"},
-						{resource: "clay", level: clay[0], growth: clayProduction, color: "red"},
-						{resource: "iron", level: iron[0], growth: ironProduction, color: "gray"},
-						{resource: "crop", level: crop[0], growth: cropProduction, color: "yellow"}
+						{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
+						{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
+						{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
+						{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
 					];
 					for (var j=0; j<resources.length; j++) {
 						var line=document.createElementNS("http://www.w3.org/2000/svg","path");
