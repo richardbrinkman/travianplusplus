@@ -203,11 +203,12 @@ function addgraphtab() {
 			graphs[i].svg.setAttribute("height", height+bordermargin);
 			graphs[i].svg.setAttribute("id", i);
 
+			//Load dorf1.php
 			graphs[i].dorf1 = new XMLHttpRequest();
 			graphs[i].dorf1.responseType = "document";
 			graphs[i].dorf1.graph=graphs[i];
 			graphs[i].dorf1.onreadystatechange = function() {
-				if (this.readyState == 4) { //finished loading
+				if (this.readyState == 4) { //finished loading dorf1.php
 					//Get resources
 					var wood = this.response.getElementById("l1").innerText.split("/");
 					var clay = this.response.getElementById("l2").innerText.split("/");
@@ -242,46 +243,100 @@ function addgraphtab() {
 						}
 					};
 
-					//Draw resource capacity line
-					var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-					resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 10,10");
-					resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
-					this.graph.svg.appendChild(resourceCapacityLine);
-					
-					//Draw crop capacity line
-					var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-					cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
-					cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
-					this.graph.svg.appendChild(cropCapacityLine);
+					//Load dorf2.php
+					var dorf2 = new XMLHttpRequest();
+					dorf2.responseType = "document";
+					dorf2.graph = this.graph;
+					dorf2.onreadystatechange = function() {
+						if (this.readyState == 4) { //finished loading dorf2.php
+							//Find URLs for the marketplace and the meetingplace
+							var buildings = this.response.getElementById("clickareas").getElementsByTagName("area");
+							var marketHref;
+							var meetingplaceHref;
+							for (var i=0; i<buildings.length; i++) {
+								if (buildings[i].getAttribute("alt").match(/Marktplaats/))
+									marketHref = buildings[i].getAttribute("href");
+								if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
+									meetingplaceHref = buildings[i].getAttribute("href");
+							}
 
-					//Draw projected resource levels
-					var resources = [
-						{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
-						{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
-						{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
-						{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
-					];
-					for (var j=0; j<resources.length; j++) {
-						var line=document.createElementNS("http://www.w3.org/2000/svg","path");
-						line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-						line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(hours*resources[j].growth));
-						this.graph.svg.appendChild(line);
-					}
+							//Load market place
+							var market = new XMLHttpRequest();
+							market.responseType = "document";
+							market.graph = this.graph;
+							market.onreadystatechange = function () {
+								if (this.readyState == 4) { //finished loading the market place
+									//TODO: Parse market place
+									var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
+									for (var j=0; j<merchantsOnTheWay.length; j++) {
+										if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
+											var aankomsttijd = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText;
+											var grondstoffen = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr")[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].innerText;
+											alert(grondstoffen + " komen aan over " + aankomsttijd);
+										}
+									}
 
-					//Draw axes
-					var group=document.createElementNS("http://www.w3.org/2000/svg","g");
-					group.setAttribute("id","axis");
-					group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
-					var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-					var ticks="M" + bordermargin + " " + height;
-					for (var j=0; j<hours; j++)
-						ticks += " m" + translate.dx(1) + " 0 l 0 " + bordermargin + " m 0 -" + bordermargin;
-					ticks += " M" + bordermargin + " " + height;
-					for (var j=5000; j<capacity; j+=5000)
-						ticks += " M " + bordermargin + " " + translate.y(j) + " l-" + bordermargin + " 0";
-					axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0 " + ticks);
-					group.appendChild(axis);
-					this.graph.svg.appendChild(group);
+									//Load meetingplace
+									var meetingplace = new XMLHttpRequest();
+									meetingplace.responseType = "document";
+									meetingplace.graph = this.graph;
+									meetingplace.onreadystatechange = function() {
+										if (this.readyState == 4) { //finished loading the meeting place
+											//TODO: parse the meeting place
+											
+											//Draw resource capacity line
+											var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+											resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 10,10");
+											resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
+											this.graph.svg.appendChild(resourceCapacityLine);
+											
+											//Draw crop capacity line
+											var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+											cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
+											cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
+											this.graph.svg.appendChild(cropCapacityLine);
+
+											//Draw projected resource levels
+											var resources = [
+												{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
+												{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
+												{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
+												{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
+											];
+											for (var j=0; j<resources.length; j++) {
+												var line=document.createElementNS("http://www.w3.org/2000/svg","path");
+												line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
+												line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(hours*resources[j].growth));
+												this.graph.svg.appendChild(line);
+											}
+
+											//Draw axes
+											var group=document.createElementNS("http://www.w3.org/2000/svg","g");
+											group.setAttribute("id","axis");
+											group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
+											var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+											var ticks="M" + bordermargin + " " + height;
+											for (var j=0; j<hours; j++)
+												ticks += " m" + translate.dx(1) + " 0 l 0 " + bordermargin + " m 0 -" + bordermargin;
+											ticks += " M" + bordermargin + " " + height;
+											for (var j=5000; j<capacity; j+=5000)
+												ticks += " M " + bordermargin + " " + translate.y(j) + " l-" + bordermargin + " 0";
+											axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0 " + ticks);
+											group.appendChild(axis);
+											this.graph.svg.appendChild(group);
+										}
+									};
+									meetingplace.open("GET", meetingplaceHref, true);
+									meetingplace.send();
+								}
+							};
+							market.open("GET", marketHref + "&t=5", true);
+							market.send();
+						}
+					};
+					dorf2.open("GET", "dorf2.php" + villageLink.getAttribute("href"), true);
+					dorf2.send();
+
 				}	
 			};
 			graphs[i].dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
