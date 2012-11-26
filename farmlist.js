@@ -276,6 +276,9 @@ function addgraphtab() {
 					var ticks="M" + bordermargin + " " + height;
 					for (var j=0; j<hours; j++)
 						ticks += " m" + translate.dx(1) + " 0 l 0 " + bordermargin + " m 0 -" + bordermargin;
+					ticks += " M" + bordermargin + " " + height;
+					for (var j=5000; j<capacity; j+=5000)
+						ticks += " M " + bordermargin + " " + translate.y(j) + " l-" + bordermargin + " 0";
 					axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0 " + ticks);
 					group.appendChild(axis);
 					this.graph.svg.appendChild(group);
