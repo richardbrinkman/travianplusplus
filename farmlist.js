@@ -294,8 +294,8 @@ function addgraphtab() {
 												resources: []
 											};
 											var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
-											for (var j=0; j<resourceImages.length; j++)
-												modification.resources[j] = parseInt(resourceImages[j].nextSibling.nodeValue);
+											for (var k=0; k<resourceImages.length; k++)
+												modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
 											modifications.push(modification);
 										}
 									}
