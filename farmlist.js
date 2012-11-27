@@ -312,16 +312,18 @@ function addgraphtab() {
 											var returningTroops = this.response.getElementById("build").getElementsByClassName("data")[0].getElementsByTagName("table");
 											for (var j=0; j<returningTroops.length; j++) 
 												if (returningTroops[j].getAttribute("class").match(/inReturn/)) {
-													var infos = returningTroops[j].getElementsByTagName("tbody");
-													var arrivalTime = infos[3].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
-													var carriedResources = infos[2].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
-													var modification = {
-														time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-														resources: []
+													var infos = returningTroops[j].getElementsByClassName("infos");
+													if (infos.length == 2) {
+														var arrivalTime = infos[1].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+														var carriedResources = infos[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
+														var modification = {
+															time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+															resources: []
+														}
+														for (var k=0; k<carriedResources.length; k++)
+															modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
+														modifications.push(modification);
 													};
-													for (var k=0; k<carriedResources.length; k++)
-														modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
-													modifications.push(modification);
 												}
 
 											//Draw resource capacity line
