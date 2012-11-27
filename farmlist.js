@@ -281,14 +281,16 @@ function addgraphtab() {
 							market.newdid = this.newdid;
 							market.onreadystatechange = function () {
 								if (this.readyState == 4) { //finished loading the market place
-									alert(this.response.URL);
 									//TODO: Parse market place
 									var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 									for (var j=0; j<merchantsOnTheWay.length; j++) {
 										if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
-											var aankomsttijd = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText;
-											var grondstoffen = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr")[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].innerText;
-											alert(grondstoffen + " komen aan over " + aankomsttijd);
+											var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+											var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText;
+											var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
+											var resources = [];
+											for (var j=0; j<resourceImages.length; j++)
+												resources[j] = parseInt(resourceImages[j].nextSibling.nodeValue);
 										}
 									}
 
