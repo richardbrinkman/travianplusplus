@@ -308,8 +308,21 @@ function addgraphtab() {
 									meetingplace.modifications = modifications;
 									meetingplace.onreadystatechange = function() {
 										if (this.readyState == 4) { //finished loading the meeting place
-											//TODO: parse the meeting place
-											
+											//Parse the meeting place
+											var returningTroops = this.response.getElementById("build").getElementsByClassName("data")[0].getElementsByTagName("table");
+											for (var j=0; j<returningTroops.length; j++) 
+												if (returningTroops[j].getAttribute("class").match(/inReturn/)) {
+													var infos = returningTroops[j].getElementsByTagName("tbody");
+													var arrivalTime = infos[3].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+													var carriedResources = infos[2].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
+													var modification = {
+														time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+														resources: []
+													};
+													for (var k=0; k<carriedResources.length; k++)
+														modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
+													modifications.push(modification);
+												}
 
 											//Draw resource capacity line
 											var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
@@ -338,7 +351,7 @@ function addgraphtab() {
 												var time = 0;
 												for(var k=0; k<modifications.length; k++) 
 													if (this.modifications[k].time < hours && this.modifications[k].resources[j] != 0) {
-														path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy(this.modifications[k].time*resources[j].growth);
+														path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy((this.modifications[k].time-time)*resources[j].growth);
 														path += " l0 " + translate.dy(this.modifications[k].resources[j]);
 														time = this.modifications[k].time;
 													}
@@ -363,7 +376,7 @@ function addgraphtab() {
 											this.graph.svg.appendChild(group);
 										}
 									};
-									meetingplace.open("GET", meetingplaceHref + "?newdid=" + this.newdid, true);
+									meetingplace.open("GET", meetingplaceHref + "?tt=1&newdid=" + this.newdid, true);
 									meetingplace.send();
 								}
 							};
