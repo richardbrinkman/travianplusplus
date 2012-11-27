@@ -126,6 +126,17 @@ function max(x,y) {
 		return x;
 }
 
+function getURLAttribute(name, url) {
+	var attributes = url.substr(url.indexOf("?")+1).split("&");
+	var result;
+	for (var i=0; i<attributes.length; i++) {
+		var pair = attributes[i].split("=");
+		if (pair[0] == name)
+			result = pair[1];
+	}
+	return result;
+}
+
 function addgraphtab() {
 	var tabs = document.evaluate(
 		"//div[@class=\"contentNavi tabNavi \"]",
@@ -209,6 +220,8 @@ function addgraphtab() {
 			graphs[i].dorf1.graph=graphs[i];
 			graphs[i].dorf1.onreadystatechange = function() {
 				if (this.readyState == 4) { //finished loading dorf1.php
+					var newdid = getURLAttribute("newdid", this.response.URL);
+
 					//Get resources
 					var wood = this.response.getElementById("l1").innerText.split("/");
 					var clay = this.response.getElementById("l2").innerText.split("/");
@@ -247,6 +260,7 @@ function addgraphtab() {
 					var dorf2 = new XMLHttpRequest();
 					dorf2.responseType = "document";
 					dorf2.graph = this.graph;
+					dorf2.newdid = newdid;
 					dorf2.onreadystatechange = function() {
 						if (this.readyState == 4) { //finished loading dorf2.php
 							//Find URLs for the marketplace and the meetingplace
@@ -264,8 +278,10 @@ function addgraphtab() {
 							var market = new XMLHttpRequest();
 							market.responseType = "document";
 							market.graph = this.graph;
+							market.newdid = this.newdid;
 							market.onreadystatechange = function () {
 								if (this.readyState == 4) { //finished loading the market place
+									alert(this.response.URL);
 									//TODO: Parse market place
 									var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 									for (var j=0; j<merchantsOnTheWay.length; j++) {
@@ -280,6 +296,7 @@ function addgraphtab() {
 									var meetingplace = new XMLHttpRequest();
 									meetingplace.responseType = "document";
 									meetingplace.graph = this.graph;
+									meetingplace.newdid = this.newdid;
 									meetingplace.onreadystatechange = function() {
 										if (this.readyState == 4) { //finished loading the meeting place
 											//TODO: parse the meeting place
@@ -326,15 +343,15 @@ function addgraphtab() {
 											this.graph.svg.appendChild(group);
 										}
 									};
-									meetingplace.open("GET", meetingplaceHref, true);
+									meetingplace.open("GET", meetingplaceHref + "?newdid=" + this.newdid, true);
 									meetingplace.send();
 								}
 							};
-							market.open("GET", marketHref + "&t=5", true);
+							market.open("GET", marketHref + "&t=5&newdid=" + this.newdid, true);
 							market.send();
 						}
 					};
-					dorf2.open("GET", "dorf2.php" + villageLink.getAttribute("href"), true);
+					dorf2.open("GET", "dorf2.php?newdid=" + newdid, true);
 					dorf2.send();
 
 				}	
