@@ -281,16 +281,22 @@ function addgraphtab() {
 							market.newdid = this.newdid;
 							market.onreadystatechange = function () {
 								if (this.readyState == 4) { //finished loading the market place
-									//TODO: Parse market place
+									var modifications = []; //Will contain objects with all the resource modifications (incoming merchants/troops)
+
+									//Parse market place
 									var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 									for (var j=0; j<merchantsOnTheWay.length; j++) {
 										if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
 											var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-											var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText;
+											var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+											var modification = {
+												time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+												resources: []
+											};
 											var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
-											var resources = [];
 											for (var j=0; j<resourceImages.length; j++)
-												resources[j] = parseInt(resourceImages[j].nextSibling.nodeValue);
+												modification.resources[j] = parseInt(resourceImages[j].nextSibling.nodeValue);
+											modifications.push(modification);
 										}
 									}
 
@@ -299,10 +305,12 @@ function addgraphtab() {
 									meetingplace.responseType = "document";
 									meetingplace.graph = this.graph;
 									meetingplace.newdid = this.newdid;
+									meetingplace.modifications = modifications;
 									meetingplace.onreadystatechange = function() {
 										if (this.readyState == 4) { //finished loading the meeting place
 											//TODO: parse the meeting place
 											
+
 											//Draw resource capacity line
 											var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
 											resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 10,10");
@@ -322,10 +330,20 @@ function addgraphtab() {
 												{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
 												{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
 											];
+											this.modifications.sort(function(a,b) {return a.time-b.time});
 											for (var j=0; j<resources.length; j++) {
 												var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 												line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-												line.setAttribute("d", "M" + bordermargin + " " + translate.y(resources[j].level) + " l" + width + " " + translate.dy(hours*resources[j].growth));
+												var path = "M" + bordermargin + " " + translate.y(resources[j].level); //Startpoint
+												var time = 0;
+												for(var k=0; k<modifications.length; k++) 
+													if (this.modifications[k].time < hours && this.modifications[k].resources[j] != 0) {
+														path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy(this.modifications[k].time*resources[j].growth);
+														path += " l0 " + translate.dy(this.modifications[k].resources[j]);
+														time = this.modifications[k].time;
+													}
+												path += " l" + width + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
+												line.setAttribute("d", path);
 												this.graph.svg.appendChild(line);
 											}
 
