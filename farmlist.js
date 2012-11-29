@@ -378,7 +378,7 @@ function addgraphtab() {
 											this.graph.svg.appendChild(group);
 										}
 									};
-									meetingplace.open("GET", meetingplaceHref + "?tt=1&newdid=" + this.newdid, true);
+									meetingplace.open("GET", meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
 									meetingplace.send();
 								}
 							};
