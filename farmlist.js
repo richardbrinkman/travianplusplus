@@ -328,7 +328,7 @@ function addgraphtab() {
 
 											//Draw resource capacity line
 											var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-											resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 10,10");
+											resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 0,10,10,0");
 											resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
 											this.graph.svg.appendChild(resourceCapacityLine);
 											
