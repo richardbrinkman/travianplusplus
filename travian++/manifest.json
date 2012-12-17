@@ -1,6 +1,7 @@
 {
 	"name": "travian++",
-	"version": "0.1",
+	"version": "1.0",
+	"update_url": "https://dl.dropbox.com/s/y5w7f8wjgf28zcu/updates.xml?dl=1",
 	"manifest_version": 2,
 	"description": "My first of building a Google Extension",
 	"content_scripts": [{
