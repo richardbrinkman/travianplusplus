@@ -119,6 +119,34 @@ function positionDetails() {
 	window.alert("Geen tileDetails gevonden");
 }
 
+function dorf3() {
+	var overview = document.getElementById("overview");
+	if (overview) { //Correct tab
+		if (overview.getElementsByClassName("none").length > 0) { //Not using Plus
+			var rows = overview.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+			var requests = [];
+			for (var i=0; i<rows.length; i++) {
+				var cols = rows[i].getElementsByTagName("td");
+				requests[i] = new XMLHttpRequest();
+				requests[i].responseType = "document";
+				requests[i].row = rows[i];
+				requests[i].onreadystatechange = function() {
+					if (this.readyState == 4) { //finished loading dorf1.php
+						var buildingContract = this.response.getElementById("building_contract");
+						if (buildingContract)
+							this.row.getElementsByClassName("bui")[0].innerHTML =
+								"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
+								buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
+								"\">";
+					}
+				};
+				requests[i].open("GET", cols[0].getElementsByTagName("a")[0].getAttribute("href"), true);
+				requests[i].send();
+			}
+		}
+	}
+}
+
 function max(x,y) {
 	if (x<y)
 		return y;
@@ -403,6 +431,10 @@ var map = [
 	{
 		regexp: /http:\/\/ts4.travian.nl\/dorf1.php/,
 		func: dorf1
+	},
+	{
+		regexp: /http:\/\/ts4.travian.nl\/dorf3.php/,
+		func: dorf3
 	},
 	{
 		regexp: /http:\/\/ts4.travian.nl\/position_details.php/,
