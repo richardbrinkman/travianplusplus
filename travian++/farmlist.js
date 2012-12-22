@@ -133,11 +133,19 @@ function dorf3() {
 				requests[i].onreadystatechange = function() {
 					if (this.readyState == 4) { //finished loading dorf1.php
 						var buildingContract = this.response.getElementById("building_contract");
-						if (buildingContract)
-							this.row.getElementsByClassName("bui")[0].innerHTML =
+						if (buildingContract) {
+							var cell = this.row.getElementsByClassName("bui")[0];
+							cell.innerHTML =
 								"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
 								buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
 								"\">";
+							var time = this.response.getElementById("timer1").innerText.split(":");
+							window.setTimeout(function(mycell) {
+								return function() {
+									mycell.innerHTML = "<span class=\"none\">-</span>";
+								};
+							}(cell), time[0]*3600000 + time[1]*60000 + time[2]*1000);
+						}
 					}
 				};
 				requests[i].open("GET", cols[0].getElementsByTagName("a")[0].getAttribute("href"), true);
