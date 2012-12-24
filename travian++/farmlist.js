@@ -125,29 +125,34 @@ function dorf3() {
 		var rows = overview.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 		for (var i=0; i<rows.length; i++)
 			(function(row) {
-				var cols = row.getElementsByTagName("td");
-				request = new XMLHttpRequest();
-				request.responseType = "document";
-				request.onreadystatechange = function() {
-					if (this.readyState == 4) { //finished loading dorf1.php
-						var buildingContract = this.response.getElementById("building_contract");
-						if (buildingContract) {
-							var cell = row.getElementsByClassName("bui")[0];
-							cell.innerHTML =
-								"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
-								buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
-								"\">";
-							var time = this.response.getElementById("timer1").innerText.split(":");
-							window.setTimeout(function(mycell) {
-								return function() {
-									mycell.innerHTML = "<span class=\"none\">-</span>";
-								};
-							}(cell), time[0]*3600000 + time[1]*60000 + time[2]*1000);
+				var cell = row.getElementsByClassName("bui")[0];
+				if (cell.innerHTML == "<span class=\"none\">?</span>") { //Only if not using Travian Plus
+					var href = row.getElementsByClassName("vil")[0].getElementsByTagName("a")[0].getAttribute("href");
+					request = new XMLHttpRequest();
+					request.responseType = "document";
+					request.onreadystatechange = function() {
+						if (this.readyState == 4) { //finished loading dorf1.php
+							var buildingContract = this.response.getElementById("building_contract");
+							if (buildingContract) {
+								cell.innerHTML =
+									"<a href=\"" + href + "\">" +
+										"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
+										buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
+										"\">" +
+									"</a>";
+								var time = this.response.getElementById("timer1").innerText.split(":");
+								window.setTimeout(function(mycell) {
+									return function() {
+										mycell.innerHTML = "<span class=\"none\">-</span>";
+									};
+								}(cell), time[0]*3600000 + time[1]*60000 + time[2]*1000);
+							} else
+								cell.innerHTML = "<span class=\"none\">-</span>";
 						}
-					}
-				};
-				request.open("GET", cols[0].getElementsByTagName("a")[0].getAttribute("href"), true);
-				request.send();
+					};
+					request.open("GET", href, true);
+					request.send();
+				}
 			})(rows[i]);
 	}
 }
