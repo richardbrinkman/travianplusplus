@@ -393,7 +393,7 @@ function addgraphtab() {
 														path += " l0 " + translate.dy(this.modifications[k].resources[j]);
 														time = this.modifications[k].time;
 													}
-												path += " l" + width + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
+												path += " l" + translate.dx(hours-time) + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
 												line.setAttribute("d", path);
 												this.graph.svg.appendChild(line);
 											}
