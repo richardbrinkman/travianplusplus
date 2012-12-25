@@ -126,67 +126,67 @@ function parseTime(str) {
 
 function dorf3Row(row) {
 	var buildingCell = row.getElementsByClassName("bui")[0];
-	if (buildingCell.innerHTML == "<span class=\"none\">?</span>") { //Only if not using Travian Plus
-		var href = row.getElementsByClassName("vil")[0].getElementsByTagName("a")[0].getAttribute("href");
-		request = new XMLHttpRequest();
-		request.responseType = "document";
-		request.onreadystatechange = function() {
-			if (this.readyState == 4) { //finished loading dorf1.php
-				//Attack icons
-				var movements = this.response.getElementById("movements");
-				var attackCell = row.getElementsByClassName("att")[0];
-				var timeout = 24*3600000; //A day in milliseconds
-				var time;
-				if (movements) {
-					var attackIcons = "";
-					["settlersOnTheWay", "hero_on_adventure", "att1", "att2", "att3", "def1", "def2","def3"].forEach(function(attackType) {
-						if (movements.getElementsByClassName(attackType).length > 0)
-							attackIcons +=
-								"<img class=\"" + attackType + "\" src=\"img/x.gif\">";
-					});
-					attackCell.innerHTML = attackIcons;
-					var timers = movements.getElementsByClassName("dur_r");
-					for (var i=0; i<timers.length; i++) {
-						time = parseTime(timers[i].getElementsByTagName("span")[0].innerText);
-						if (time < timeout)
-							timeout = time;
-					}
-				} else
-					attackCell.innerHTML = "<span class=\"none\">-</span>";
-
-				//Building icon
-				var buildingContract = this.response.getElementById("building_contract");
-				if (buildingContract) {
-					buildingCell.innerHTML =
-						"<a href=\"" + href + "\">" +
-							"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
-							buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
-							"\">" +
-						"</a>";
-					time = parseTime(this.response.getElementById("timer1").innerText);
+	var href = row.getElementsByClassName("vil")[0].getElementsByTagName("a")[0].getAttribute("href");
+	request = new XMLHttpRequest();
+	request.responseType = "document";
+	request.onreadystatechange = function() {
+		if (this.readyState == 4) { //finished loading dorf1.php
+			//Attack icons
+			var movements = this.response.getElementById("movements");
+			var attackCell = row.getElementsByClassName("att")[0];
+			var timeout = 24*3600000; //A day in milliseconds
+			var time;
+			if (movements) {
+				var attackIcons = "";
+				["settlersOnTheWay", "hero_on_adventure", "att1", "att2", "att3", "def1", "def2","def3"].forEach(function(attackType) {
+					if (movements.getElementsByClassName(attackType).length > 0)
+						attackIcons +=
+							"<img class=\"" + attackType + "\" src=\"img/x.gif\">";
+				});
+				attackCell.innerHTML = attackIcons;
+				var timers = movements.getElementsByClassName("dur_r");
+				for (var i=0; i<timers.length; i++) {
+					time = parseTime(timers[i].getElementsByTagName("span")[0].innerText);
 					if (time < timeout)
 						timeout = time;
-				} else
-					cell.innerHTML = "<span class=\"none\">-</span>";
-				if (timeout < 24*3600000)
-					window.setTimeout(function(myRow) {
-						return function() {
-							dorf3Row(myRow);
-						};
-					}(row), timeout);
-			}
-		};
-		request.open("GET", href, true);
-		request.send();
-	}
+				}
+			} else
+				attackCell.innerHTML = "<span class=\"none\">-</span>";
+
+			//Building icon
+			var buildingContract = this.response.getElementById("building_contract");
+			if (buildingContract) {
+				buildingCell.innerHTML =
+					"<a href=\"" + href + "\">" +
+						"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
+						buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
+						"\">" +
+					"</a>";
+				time = parseTime(this.response.getElementById("timer1").innerText);
+				if (time < timeout)
+					timeout = time;
+			} else
+				cell.innerHTML = "<span class=\"none\">-</span>";
+			if (timeout < 24*3600000)
+				window.setTimeout(function(myRow) {
+					return function() {
+						dorf3Row(myRow);
+					};
+				}(row), timeout+1000);
+		}
+	};
+	request.open("GET", href, true);
+	request.send();
 }
 
 function dorf3() {
-	var overview = document.getElementById("overview");
-	if (overview) { //Correct tab
-		var rows = overview.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-		for (var i=0; i<rows.length; i++)
-			dorf3Row(rows[i]);
+	if (document.getElementsByClassName("content")[1].getElementsByTagName("a").length == 0) { //Not using Travian plus
+		var overview = document.getElementById("overview");
+		if (overview) { //Correct tab
+			var rows = overview.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+			for (var i=0; i<rows.length; i++)
+				dorf3Row(rows[i]);
+		}
 	}
 }
 
