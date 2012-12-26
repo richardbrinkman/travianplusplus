@@ -214,10 +214,30 @@ function GraphCollection(hours, width, height, bordermargin) {
 	this.width = width;
 	this.height = height;
 	this.bordermargin = bordermargin;
+	this.states = [];
 }
 
 GraphCollection.prototype.add = function(graph) {
 	this.graphs.push(graph);
+	this.states.push({
+		sender: graph,
+		dorf1: false,
+		marketplace: false,
+		meetingplace: false
+	});
+};
+
+GraphCollection.prototype.ready = function(graph, pageType) {
+	var everythingReady = true;
+	this.states.forEach(function(state) {
+		if (state.sender == graph)
+			state[pageType] = true;
+		everythingReady = everythingReady && state.dorf1 && state.marketplace && state.meetingplace;
+	});
+	if (everythingReady)
+		this.graphs.forEach(function(graph) {
+			graph.drawResourceLevels();
+		});
 };
 
 function Graph(graphs) {
@@ -238,6 +258,8 @@ function Graph(graphs) {
 	this.translate = {};
 	this.marketHref = null;
 	this.meetingplaceHref = null;
+	this.modifications = [];
+	graphs.add(this);
 }
 
 Graph.prototype.setSVG = function() {
@@ -314,12 +336,14 @@ Graph.prototype.loadDorf1 = function() {
 			group.appendChild(axis);
 			self.svg.appendChild(group);
 		}
+		self.graphs.ready(self, "dorf1");
 	}
 	request.open("GET", "dorf1.php?newdid=" + this.newdid, true);
 	request.send();
 };
 
 Graph.prototype.loadDorf2 = function() {
+	var self = this;
 	var request = new XMLHttpRequest();
 	request.responseType = "document";
 	request.graph = this.graph;
@@ -328,11 +352,19 @@ Graph.prototype.loadDorf2 = function() {
 			//Find URLs for the marketplace and the meetingplace
 			var buildings = this.response.getElementById("clickareas").getElementsByTagName("area");
 			for (var i=0; i<buildings.length; i++) {
-				if (buildings[i].getAttribute("alt").match(/Marktplaats/))
+				if (buildings[i].getAttribute("alt").match(/Marktplaats/)) 
 					self.marketHref = buildings[i].getAttribute("href");
-				if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
+				else if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
 					self.meetingplaceHref = buildings[i].getAttribute("href");
 			}
+			if (self.marketHref)
+				self.loadMarketplace();
+			else
+				self.graphs.ready(self, "marketplace");
+			if (self.meetingplaceHref)
+				self.loadMeetingplace();
+			else
+				self.graphs.ready(self, "meetingplace");
 		}
 	};
 	request.open("GET", "dorf2.php?newdid=" + this.newdid, true);
@@ -340,13 +372,11 @@ Graph.prototype.loadDorf2 = function() {
 };
 
 Graph.prototype.loadMarketplace = function() {
+	var self = this;
 	var market = new XMLHttpRequest();
 	market.responseType = "document";
-	market.graph = this.graph;
 	market.onreadystatechange = function () {
 		if (this.readyState == 4) { //finished loading the market place
-			var modifications = []; //Will contain objects with all the resource modifications (incoming merchants/troops)
-
 			//Parse market place
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 			for (var j=0; j<merchantsOnTheWay.length; j++) {
@@ -360,20 +390,20 @@ Graph.prototype.loadMarketplace = function() {
 					var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
 					for (var k=0; k<resourceImages.length; k++)
 						modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
-					modifications.push(modification);
+					self.modifications.push(modification);
 				}
 			}
+			self.graphs.ready(self, "marketplace");
 		}
 	};
-	market.open("GET", marketHref + "&t=5&newdid=" + this.newdid, true);
+	market.open("GET", this.marketHref + "&t=5&newdid=" + this.newdid, true);
 	market.send();
 };
 
 Graph.prototype.loadMeetingplace = function() {
+	var self = this;
 	var meetingplace = new XMLHttpRequest();
 	meetingplace.responseType = "document";
-	meetingplace.graph = this.graph;
-	meetingplace.modifications = modifications;
 	meetingplace.onreadystatechange = function() {
 		if (this.readyState == 4) { //finished loading the meeting place
 			//Parse the meeting place
@@ -390,38 +420,39 @@ Graph.prototype.loadMeetingplace = function() {
 						}
 						for (var k=0; k<carriedResources.length; k++)
 							modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
-						modifications.push(modification);
+						self.modifications.push(modification);
 					};
 				}
+			self.graphs.ready(self, "meetingplace");
 		}
 	};
-	meetingplace.open("GET", meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
+	meetingplace.open("GET", this.meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
 	meetingplace.send();
 };
 
 Graph.prototype.drawResourceLevels = function() {
 	//Draw projected resource levels
 	var resources = [
-		{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
-		{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
-		{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
-		{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
+		{resource: "wood", level: parseInt(this.wood[0]), growth: parseInt(this.woodProduction), color: "green"},
+		{resource: "clay", level: parseInt(this.clay[0]), growth: parseInt(this.clayProduction), color: "red"},
+		{resource: "iron", level: parseInt(this.iron[0]), growth: parseInt(this.ironProduction), color: "gray"},
+		{resource: "crop", level: parseInt(this.crop[0]), growth: parseInt(this.cropProduction), color: "yellow"}
 	];
 	this.modifications.sort(function(a,b) {return a.time-b.time});
 	for (var j=0; j<resources.length; j++) {
 		var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 		line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-		var path = "M" + bordermargin + " " + translate.y(resources[j].level); //Startpoint
+		var path = "M" + this.graphs.bordermargin + " " + this.translate.y(resources[j].level); //Startpoint
 		var time = 0;
-		for(var k=0; k<modifications.length; k++) 
-			if (this.modifications[k].time < hours && this.modifications[k].resources[j] != 0) {
-				path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy((this.modifications[k].time-time)*resources[j].growth);
-				path += " l0 " + translate.dy(this.modifications[k].resources[j]);
+		for(var k=0; k<this.modifications.length; k++) 
+			if (this.modifications[k].time < this.graphs.hours && this.modifications[k].resources[j] != 0) {
+				path += " l" + this.translate.dx(this.modifications[k].time-time) + " " + this.translate.dy((this.modifications[k].time-time)*resources[j].growth);
+				path += " l0 " + this.translate.dy(this.modifications[k].resources[j]);
 				time = this.modifications[k].time;
 			}
-		path += " l" + translate.dx(hours-time) + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
+		path += " l" + this.translate.dx(this.graphs.hours-time) + " " + this.translate.dy((this.graphs.hours-time)*resources[j].growth); //Endpoint
 		line.setAttribute("d", path);
-		this.graph.svg.appendChild(line);
+		this.svg.appendChild(line);
 	}
 };
 
