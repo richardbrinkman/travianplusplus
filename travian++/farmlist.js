@@ -208,6 +208,223 @@ function getURLAttribute(name, url) {
 	return result;
 }
 
+function GraphCollection(hours, width, height, bordermargin) {
+	this.graphs = [];
+	this.hours = hours;
+	this.width = width;
+	this.height = height;
+	this.bordermargin = bordermargin;
+}
+
+GraphCollection.prototype.add = function(graph) {
+	this.graphs.push(graph);
+};
+
+function Graph(graphs) {
+	this.graphs = graphs;
+	this.svg = null;
+	this.newdid = null;
+	this.wood = null;
+	this.clay = null;
+	this.iron = null;
+	this.crop = null;
+	this.resourceCapacity = 0;
+	this.cropCapacity = 0;
+	this.capacity = 0;
+	this.woodProduction = 0;
+	this.clayProduction = 0;
+	this.ironProduction = 0;
+	this.cropProduction = 0;
+	this.translate = {};
+	this.marketHref = null;
+	this.meetingplaceHref = null;
+}
+
+Graph.prototype.setSVG = function() {
+	this.svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+	this.svg.setAttribute("version", "1.1");
+	this.svg.setAttribute("width", this.graphs.width + this.graphs.bordermargin);
+	this.svg.setAttribute("height", this.graphs.height + this.graphs.bordermargin);
+}
+
+Graph.prototype.loadDorf1 = function() {
+	var request = new XMLHttpRequest();
+	request.responseType = "document";
+	var self = this;
+	request.onreadystatechange = function() {
+		if (this.readyState == 4) { //finished loading dorf1.php
+			//Get resources
+			self.wood = this.response.getElementById("l1").innerText.split("/");
+			self.clay = this.response.getElementById("l2").innerText.split("/");
+			self.iron = this.response.getElementById("l3").innerText.split("/");
+			self.crop = this.response.getElementById("l4").innerText.split("/");
+
+			//Get capacities
+			self.resourceCapacity = parseInt(self.wood[1]);
+			self.cropCapacity = parseInt(self.crop[1]);
+			self.capacity = max(self.resourceCapacity, self.cropCapacity);
+
+			//Get production
+			var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+			self.woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+			self.clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+			self.ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+			self.cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+
+			//Define translate object
+			self.translate = {
+				dx: function(rx) {
+					return self.graphs.width*rx/self.graphs.hours
+				},
+				x: function(rx) {
+					return self.graphs.bordermargin + this.dx(rx); //TODO parse time, etc.
+				},
+				dy: function(ry) {
+					return -self.graphs.height*ry/self.capacity;
+				},
+				y: function(ry) {
+					return self.graphs.height + this.dy(ry);
+				}
+			};
+											
+			//Draw resource capacity line
+			var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+			resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 0,10,10,0");
+			resourceCapacityLine.setAttribute("d", "M" + self.graphs.bordermargin + " " + self.translate.y(self.resourceCapacity) + " l" + self.graphs.width + " 0");
+			self.svg.appendChild(resourceCapacityLine);
+			
+			//Draw crop capacity line
+			var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+			cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
+			cropCapacityLine.setAttribute("d", "M" + self.graphs.bordermargin + " " + self.translate.y(self.cropCapacity) + " l" + self.graphs.width + " 0");
+			self.svg.appendChild(cropCapacityLine);
+
+			//Draw axes
+			var group=document.createElementNS("http://www.w3.org/2000/svg","g");
+			group.setAttribute("id","axis");
+			group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
+			var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+			var ticks="M" + self.graphs.bordermargin + " " + self.graphs.height;
+			for (var j=0; j<self.graphs.hours; j++)
+				ticks += " m" + self.translate.dx(1) + " 0 l 0 " + self.graphs.bordermargin + " m 0 -" + self.graphs.bordermargin;
+			ticks += " M" + self.graphs.bordermargin + " " + self.graphs.height;
+			for (var j=5000; j<self.capacity; j+=5000)
+				ticks += " M " + self.graphs.bordermargin + " " + self.translate.y(j) + " l-" + self.graphs.bordermargin + " 0";
+			axis.setAttribute("d", "M" + self.graphs.bordermargin + " 0 l0 " + self.graphs.height + " l" + self.graphs.width + " 0 " + ticks);
+			group.appendChild(axis);
+			self.svg.appendChild(group);
+		}
+	}
+	request.open("GET", "dorf1.php?newdid=" + this.newdid, true);
+	request.send();
+};
+
+Graph.prototype.loadDorf2 = function() {
+	var request = new XMLHttpRequest();
+	request.responseType = "document";
+	request.graph = this.graph;
+	request.onreadystatechange = function() {
+		if (this.readyState == 4) { //finished loading dorf2.php
+			//Find URLs for the marketplace and the meetingplace
+			var buildings = this.response.getElementById("clickareas").getElementsByTagName("area");
+			for (var i=0; i<buildings.length; i++) {
+				if (buildings[i].getAttribute("alt").match(/Marktplaats/))
+					self.marketHref = buildings[i].getAttribute("href");
+				if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
+					self.meetingplaceHref = buildings[i].getAttribute("href");
+			}
+		}
+	};
+	request.open("GET", "dorf2.php?newdid=" + this.newdid, true);
+	request.send();
+};
+
+Graph.prototype.loadMarketplace = function() {
+	var market = new XMLHttpRequest();
+	market.responseType = "document";
+	market.graph = this.graph;
+	market.onreadystatechange = function () {
+		if (this.readyState == 4) { //finished loading the market place
+			var modifications = []; //Will contain objects with all the resource modifications (incoming merchants/troops)
+
+			//Parse market place
+			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
+			for (var j=0; j<merchantsOnTheWay.length; j++) {
+				if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
+					var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+					var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+					var modification = {
+						time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+						resources: []
+					};
+					var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
+					for (var k=0; k<resourceImages.length; k++)
+						modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
+					modifications.push(modification);
+				}
+			}
+		}
+	};
+	market.open("GET", marketHref + "&t=5&newdid=" + this.newdid, true);
+	market.send();
+};
+
+Graph.prototype.loadMeetingplace = function() {
+	var meetingplace = new XMLHttpRequest();
+	meetingplace.responseType = "document";
+	meetingplace.graph = this.graph;
+	meetingplace.modifications = modifications;
+	meetingplace.onreadystatechange = function() {
+		if (this.readyState == 4) { //finished loading the meeting place
+			//Parse the meeting place
+			var returningTroops = this.response.getElementById("build").getElementsByClassName("data")[0].getElementsByTagName("table");
+			for (var j=0; j<returningTroops.length; j++) 
+				if (returningTroops[j].getAttribute("class").match(/inReturn/)) {
+					var infos = returningTroops[j].getElementsByClassName("infos");
+					if (infos.length == 2) {
+						var arrivalTime = infos[1].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+						var carriedResources = infos[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
+						var modification = {
+							time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+							resources: []
+						}
+						for (var k=0; k<carriedResources.length; k++)
+							modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
+						modifications.push(modification);
+					};
+				}
+		}
+	};
+	meetingplace.open("GET", meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
+	meetingplace.send();
+};
+
+Graph.prototype.drawResourceLevels = function() {
+	//Draw projected resource levels
+	var resources = [
+		{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
+		{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
+		{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
+		{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
+	];
+	this.modifications.sort(function(a,b) {return a.time-b.time});
+	for (var j=0; j<resources.length; j++) {
+		var line=document.createElementNS("http://www.w3.org/2000/svg","path");
+		line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
+		var path = "M" + bordermargin + " " + translate.y(resources[j].level); //Startpoint
+		var time = 0;
+		for(var k=0; k<modifications.length; k++) 
+			if (this.modifications[k].time < hours && this.modifications[k].resources[j] != 0) {
+				path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy((this.modifications[k].time-time)*resources[j].growth);
+				path += " l0 " + translate.dy(this.modifications[k].resources[j]);
+				time = this.modifications[k].time;
+			}
+		path += " l" + translate.dx(hours-time) + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
+		line.setAttribute("d", path);
+		this.graph.svg.appendChild(line);
+	}
+};
+
 function addgraphtab() {
 	var tabs = document.evaluate(
 		"//div[@class=\"contentNavi tabNavi \"]",
@@ -269,203 +486,21 @@ function addgraphtab() {
 		var hours = 24;
 
 		//Iterate over all the villages
-		var graphs = [];
-		for (i=0; i<villages.length; i++) {
+		var graphs = new GraphCollection(hours, width, height, bordermargin);
+		for (i=0; i < villages.length; i++) (function(village, graph) {
 			//Add village name as header
 			var villageHeader = document.createElement("h5");
-			var villageLink = villages[i].getElementsByTagName("a")[0];
+			var villageLink = village.getElementsByTagName("a")[0];
+			graph.newdid = getURLAttribute("newdid", villageLink.getAttribute("href"));
 			villageHeader.innerText=villageLink.innerText;
 			content.insertBefore(villageHeader, cleardiv);
-
-			//Add the resources graph
-			graphs[i] = {};
-			graphs[i].svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
-			graphs[i].svg.setAttribute("version", "1.1");
-			graphs[i].svg.setAttribute("width", width+bordermargin);
-			graphs[i].svg.setAttribute("height", height+bordermargin);
-			graphs[i].svg.setAttribute("id", i);
-
-			//Load dorf1.php
-			graphs[i].dorf1 = new XMLHttpRequest();
-			graphs[i].dorf1.responseType = "document";
-			graphs[i].dorf1.graph=graphs[i];
-			graphs[i].dorf1.onreadystatechange = function() {
-				if (this.readyState == 4) { //finished loading dorf1.php
-					var newdid = getURLAttribute("newdid", this.response.URL);
-
-					//Get resources
-					var wood = this.response.getElementById("l1").innerText.split("/");
-					var clay = this.response.getElementById("l2").innerText.split("/");
-					var iron = this.response.getElementById("l3").innerText.split("/");
-					var crop = this.response.getElementById("l4").innerText.split("/");
-
-					//Get capacities
-					var resourceCapacity = parseInt(wood[1]);
-					var cropCapacity = parseInt(crop[1]);
-					var capacity = max(resourceCapacity, cropCapacity);
-
-					//Get production
-					var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-					var woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-					var clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-					var ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-					var cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-
-					//Define translate object
-					var translate = {
-						dx: function(rx) {
-							return width*rx/hours
-						},
-						x: function(rx) {
-							return bordermargin + this.dx(rx); //TODO parse time, etc.
-						},
-						dy: function(ry) {
-							return -height*ry/capacity;
-						},
-						y: function(ry) {
-							return height + this.dy(ry);
-						}
-					};
-
-					//Load dorf2.php
-					var dorf2 = new XMLHttpRequest();
-					dorf2.responseType = "document";
-					dorf2.graph = this.graph;
-					dorf2.newdid = newdid;
-					dorf2.onreadystatechange = function() {
-						if (this.readyState == 4) { //finished loading dorf2.php
-							//Find URLs for the marketplace and the meetingplace
-							var buildings = this.response.getElementById("clickareas").getElementsByTagName("area");
-							var marketHref;
-							var meetingplaceHref;
-							for (var i=0; i<buildings.length; i++) {
-								if (buildings[i].getAttribute("alt").match(/Marktplaats/))
-									marketHref = buildings[i].getAttribute("href");
-								if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
-									meetingplaceHref = buildings[i].getAttribute("href");
-							}
-
-							//Load market place
-							var market = new XMLHttpRequest();
-							market.responseType = "document";
-							market.graph = this.graph;
-							market.newdid = this.newdid;
-							market.onreadystatechange = function () {
-								if (this.readyState == 4) { //finished loading the market place
-									var modifications = []; //Will contain objects with all the resource modifications (incoming merchants/troops)
-
-									//Parse market place
-									var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
-									for (var j=0; j<merchantsOnTheWay.length; j++) {
-										if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
-											var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-											var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
-											var modification = {
-												time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-												resources: []
-											};
-											var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
-											for (var k=0; k<resourceImages.length; k++)
-												modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
-											modifications.push(modification);
-										}
-									}
-
-									//Load meetingplace
-									var meetingplace = new XMLHttpRequest();
-									meetingplace.responseType = "document";
-									meetingplace.graph = this.graph;
-									meetingplace.newdid = this.newdid;
-									meetingplace.modifications = modifications;
-									meetingplace.onreadystatechange = function() {
-										if (this.readyState == 4) { //finished loading the meeting place
-											//Parse the meeting place
-											var returningTroops = this.response.getElementById("build").getElementsByClassName("data")[0].getElementsByTagName("table");
-											for (var j=0; j<returningTroops.length; j++) 
-												if (returningTroops[j].getAttribute("class").match(/inReturn/)) {
-													var infos = returningTroops[j].getElementsByClassName("infos");
-													if (infos.length == 2) {
-														var arrivalTime = infos[1].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
-														var carriedResources = infos[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
-														var modification = {
-															time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-															resources: []
-														}
-														for (var k=0; k<carriedResources.length; k++)
-															modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
-														modifications.push(modification);
-													};
-												}
-
-											//Draw resource capacity line
-											var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-											resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 0,10,10,0");
-											resourceCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(resourceCapacity) + " l" + width + " 0");
-											this.graph.svg.appendChild(resourceCapacityLine);
-											
-											//Draw crop capacity line
-											var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-											cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
-											cropCapacityLine.setAttribute("d", "M" + bordermargin + " " + translate.y(cropCapacity) + " l" + width + " 0");
-											this.graph.svg.appendChild(cropCapacityLine);
-
-											//Draw projected resource levels
-											var resources = [
-												{resource: "wood", level: parseInt(wood[0]), growth: parseInt(woodProduction), color: "green"},
-												{resource: "clay", level: parseInt(clay[0]), growth: parseInt(clayProduction), color: "red"},
-												{resource: "iron", level: parseInt(iron[0]), growth: parseInt(ironProduction), color: "gray"},
-												{resource: "crop", level: parseInt(crop[0]), growth: parseInt(cropProduction), color: "yellow"}
-											];
-											this.modifications.sort(function(a,b) {return a.time-b.time});
-											for (var j=0; j<resources.length; j++) {
-												var line=document.createElementNS("http://www.w3.org/2000/svg","path");
-												line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-												var path = "M" + bordermargin + " " + translate.y(resources[j].level); //Startpoint
-												var time = 0;
-												for(var k=0; k<modifications.length; k++) 
-													if (this.modifications[k].time < hours && this.modifications[k].resources[j] != 0) {
-														path += " l" + translate.dx(this.modifications[k].time-time) + " " + translate.dy((this.modifications[k].time-time)*resources[j].growth);
-														path += " l0 " + translate.dy(this.modifications[k].resources[j]);
-														time = this.modifications[k].time;
-													}
-												path += " l" + translate.dx(hours-time) + " " + translate.dy((hours-time)*resources[j].growth); //Endpoint
-												line.setAttribute("d", path);
-												this.graph.svg.appendChild(line);
-											}
-
-											//Draw axes
-											var group=document.createElementNS("http://www.w3.org/2000/svg","g");
-											group.setAttribute("id","axis");
-											group.setAttribute("style", "fill:none; stroke:black; stroke-width:3");
-											var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
-											var ticks="M" + bordermargin + " " + height;
-											for (var j=0; j<hours; j++)
-												ticks += " m" + translate.dx(1) + " 0 l 0 " + bordermargin + " m 0 -" + bordermargin;
-											ticks += " M" + bordermargin + " " + height;
-											for (var j=5000; j<capacity; j+=5000)
-												ticks += " M " + bordermargin + " " + translate.y(j) + " l-" + bordermargin + " 0";
-											axis.setAttribute("d", "M" + bordermargin + " 0 l0 " + height + " l" + width + " 0 " + ticks);
-											group.appendChild(axis);
-											this.graph.svg.appendChild(group);
-										}
-									};
-									meetingplace.open("GET", meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
-									meetingplace.send();
-								}
-							};
-							market.open("GET", marketHref + "&t=5&newdid=" + this.newdid, true);
-							market.send();
-						}
-					};
-					dorf2.open("GET", "dorf2.php?newdid=" + newdid, true);
-					dorf2.send();
-
-				}	
-			};
-			graphs[i].dorf1.open("GET", "dorf1.php" + villageLink.getAttribute("href"), true);
-			graphs[i].dorf1.send();
-			content.insertBefore(graphs[i].svg, cleardiv);
-		}
+			
+			//Place empty svg
+			graph.setSVG();
+			graph.loadDorf1();
+			graph.loadDorf2();
+			content.insertBefore(graph.svg, cleardiv);
+		})(villages[i], new Graph(graphs));
 	}
 }
 
