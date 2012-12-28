@@ -5,11 +5,49 @@
 	</head>
 	<body>
 		<h1>Travian++ - A Google Chrome extension for Travian</h1>
+		<h2>Features</h2>
 		<p>Currently the travian++ extension has the following features:</p>
 		<ul>
 			<li>A farmlist</li>
 			<li>Graphs visualising the prognosed resourcelevels</li>
 			<li>A more sophisticated village overview</li>
 		</ul>
+		<h2>How to obtain</h2>
+		<p>There are two ways to obtain Travian++</p>
+		<dl>
+			<dt>Download crx</dt>
+			<dd>
+				Since newer versions of Google Chrome will not allow installation from
+				outside the Google Chrome WebStore any more, you have to start Chrome
+				with the command-line option 
+				<code>--enable-easy-off-store-extension-install</code>. The extension
+				can now be downloaded and installed from my 
+				<a href="https://dl.dropbox.com/s/86e6c3tozd2op35/travian%2B%2B.crx?dl=1">
+					Dropbox
+				</a> account. You will be asked for permission. If you aggree on 
+				everything, then it is installed correctly and can be used. Updates 
+				will be downloaded automatically by Google Chrome.
+			</dd>
+			<dt>Install from source</dt>
+			<dd>
+				Installing from source is only recommended for experienced users or 
+				developers.
+				<ol>
+					<li>
+						<code>git clone https://github.com/richardbrinkman/travianplusplus.git</code>
+					</li>
+					<li>
+						In Google Chrome select 
+						<code>Customize and control Google Chrome</code>
+					</li>
+					<li>Select Tools</li>
+					<li>Select Extensions</li>
+					<li>Ensure the <code>Developer mode</code> is checked</li>
+					<li>Click the <code>Load unpacked extension</code> button</li>
+					<li>Navigate to the Travian++ subdirectory in the checkout code</li>
+					<li>Updates can be downloaded by a simple <code>git pull</code>.</li>
+				</ol>
+			</dd>
+		</dl>
 	</body>
 </html>
