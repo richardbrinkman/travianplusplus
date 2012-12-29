@@ -166,7 +166,7 @@ function dorf3Row(row) {
 				if (time < timeout)
 					timeout = time;
 			} else
-				cell.innerHTML = "<span class=\"none\">-</span>";
+				buildingCell.innerHTML = "<span class=\"none\">-</span>";
 			if (timeout < 24*3600000)
 				window.setTimeout(function(myRow) {
 					return function() {
