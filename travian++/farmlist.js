@@ -362,7 +362,7 @@ Graph.prototype.loadDorf2 = function() {
 			else
 				self.graphs.ready(self, "marketplace");
 			if (self.meetingplaceHref)
-				self.loadMeetingplace();
+				self.loadMeetingplace(1);
 			else
 				self.graphs.ready(self, "meetingplace");
 		}
@@ -400,7 +400,7 @@ Graph.prototype.loadMarketplace = function() {
 	market.send();
 };
 
-Graph.prototype.loadMeetingplace = function() {
+Graph.prototype.loadMeetingplace = function(page) {
 	var self = this;
 	var meetingplace = new XMLHttpRequest();
 	meetingplace.responseType = "document";
@@ -423,10 +423,14 @@ Graph.prototype.loadMeetingplace = function() {
 						self.modifications.push(modification);
 					};
 				}
-			self.graphs.ready(self, "meetingplace");
+			var next = this.response.getElementsByClassName("next")[0];
+			if (next && next.tagName == "A") 
+				self.loadMeetingplace(getURLAttribute("page", next.getAttribute("href")));
+			else
+				self.graphs.ready(self, "meetingplace");
 		}
 	};
-	meetingplace.open("GET", this.meetingplaceHref + "&filter=1&tt=1&newdid=" + this.newdid, true);
+	meetingplace.open("GET", this.meetingplaceHref + "&filter=1&tt=1&newdid=" + this.newdid + "&page=" + page, true);
 	meetingplace.send();
 };
 
