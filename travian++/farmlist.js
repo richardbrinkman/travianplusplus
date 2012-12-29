@@ -426,7 +426,7 @@ Graph.prototype.loadMeetingplace = function() {
 			self.graphs.ready(self, "meetingplace");
 		}
 	};
-	meetingplace.open("GET", this.meetingplaceHref + "&tt=1&newdid=" + this.newdid, true);
+	meetingplace.open("GET", this.meetingplaceHref + "&filter=1&tt=1&newdid=" + this.newdid, true);
 	meetingplace.send();
 };
 
