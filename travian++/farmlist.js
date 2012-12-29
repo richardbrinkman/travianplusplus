@@ -299,7 +299,7 @@ Graph.prototype.loadDorf1 = function() {
 					return self.graphs.width*rx/self.graphs.hours
 				},
 				x: function(rx) {
-					return self.graphs.bordermargin + this.dx(rx); //TODO parse time, etc.
+					return self.graphs.bordermargin + this.dx(rx);
 				},
 				dy: function(ry) {
 					return -self.graphs.height*ry/self.capacity;
@@ -433,24 +433,45 @@ Graph.prototype.loadMeetingplace = function() {
 Graph.prototype.drawResourceLevels = function() {
 	//Draw projected resource levels
 	var resources = [
-		{resource: "wood", level: parseInt(this.wood[0]), growth: parseInt(this.woodProduction), color: "green"},
-		{resource: "clay", level: parseInt(this.clay[0]), growth: parseInt(this.clayProduction), color: "red"},
-		{resource: "iron", level: parseInt(this.iron[0]), growth: parseInt(this.ironProduction), color: "gray"},
-		{resource: "crop", level: parseInt(this.crop[0]), growth: parseInt(this.cropProduction), color: "yellow"}
+		{resource: "wood", level: parseInt(this.wood[0]), growth: parseInt(this.woodProduction), color: "green", capacity: this.resourceCapacity},
+		{resource: "clay", level: parseInt(this.clay[0]), growth: parseInt(this.clayProduction), color: "red", capacity: this.resourceCapacity},
+		{resource: "iron", level: parseInt(this.iron[0]), growth: parseInt(this.ironProduction), color: "gray", capacity: this.resourceCapacity},
+		{resource: "crop", level: parseInt(this.crop[0]), growth: parseInt(this.cropProduction), color: "yellow", capacity: this.cropCapacity}
 	];
+	this.modifications.push({
+		time: this.graphs.hours,
+		resources: [0,0,0,0]
+	});
 	this.modifications.sort(function(a,b) {return a.time-b.time});
 	for (var j=0; j<resources.length; j++) {
 		var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 		line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
-		var path = "M" + this.graphs.bordermargin + " " + this.translate.y(resources[j].level); //Startpoint
+		var level = resources[j].level;
 		var time = 0;
-		for(var k=0; k<this.modifications.length; k++) 
-			if (this.modifications[k].time < this.graphs.hours && this.modifications[k].resources[j] != 0) {
-				path += " l" + this.translate.dx(this.modifications[k].time-time) + " " + this.translate.dy((this.modifications[k].time-time)*resources[j].growth);
-				path += " l0 " + this.translate.dy(this.modifications[k].resources[j]);
+		var path = "M" + this.translate.x(time) + " " + this.translate.y(level); //Startpoint
+		for(var k=0; k<this.modifications.length; k++)
+			if (this.modifications[k].time <= this.graphs.hours) {
+				var newLevel = level + resources[j].growth * (this.modifications[k].time-time);
+				if (newLevel < 0 || newLevel > resources[j].capacity) {
+					var y = (newLevel < 0) ? 0 : resources[j].capacity;
+					time = (y - level + time*resources[j].growth) / resources[j].growth;
+					level = y;
+					newLevel = level;
+					path += " L" + this.translate.x(time) + " " + this.translate.y(level);
+				}
+				level = newLevel;
 				time = this.modifications[k].time;
+				path += " L" + this.translate.x(time) + " " + this.translate.y(level);
+				if (this.modifications[k].resources[j] != 0) {
+					level += this.modifications[k].resources[j];
+					if (level < 0) 
+						level = 0;
+					if (level > resources[j].capacity) 
+						level = resources[j].capacity;
+					path += " L" + this.translate.x(time) + " " + this.translate.y(level);
+				}
 			}
-		path += " l" + this.translate.dx(this.graphs.hours-time) + " " + this.translate.dy((this.graphs.hours-time)*resources[j].growth); //Endpoint
+		//path += " l" + this.translate.dx(this.graphs.hours-time) + " " + this.translate.dy((this.graphs.hours-time)*resources[j].growth); //Endpoint
 		line.setAttribute("d", path);
 		this.svg.appendChild(line);
 	}
