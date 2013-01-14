@@ -346,7 +346,6 @@ Graph.prototype.loadDorf2 = function() {
 	var self = this;
 	var request = new XMLHttpRequest();
 	request.responseType = "document";
-	request.graph = this.graph;
 	request.onreadystatechange = function() {
 		if (this.readyState == 4) { //finished loading dorf2.php
 			//Find URLs for the marketplace and the meetingplace
