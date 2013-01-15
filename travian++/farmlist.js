@@ -170,7 +170,7 @@ function dorf3Row(row) {
 			if (timeout < 24*3600000)
 				window.setTimeout(function(myRow) {
 					return function() {
-						dorf3Row(myRow);
+						location.reload();
 					};
 				}(row), timeout+1000);
 		}
