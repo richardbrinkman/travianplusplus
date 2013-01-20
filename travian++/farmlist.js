@@ -127,6 +127,11 @@ function parseTime(str) {
 function dorf3Row(row) {
 	var buildingCell = row.getElementsByClassName("bui")[0];
 	var href = row.getElementsByClassName("vil")[0].getElementsByTagName("a")[0].getAttribute("href");
+	var marketPlaceHref = row.getElementsByClassName("tra")[0].getElementsByTagName("a")[0];
+	marketPlaceHref.setAttribute(
+		"href",
+		marketPlaceHref.getAttribute("href") + "&newdid=" + getURLAttribute("newdid", href)
+	);
 	request = new XMLHttpRequest();
 	request.responseType = "document";
 	request.onreadystatechange = function() {
@@ -167,6 +172,7 @@ function dorf3Row(row) {
 					timeout = time;
 			} else
 				buildingCell.innerHTML = "<span class=\"none\">-</span>";
+
 			if (timeout < 24*3600000)
 				window.setTimeout(function(myRow) {
 					return function() {
