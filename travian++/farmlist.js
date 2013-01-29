@@ -385,17 +385,32 @@ Graph.prototype.loadMarketplace = function() {
 			//Parse market place
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 			for (var j=0; j<merchantsOnTheWay.length; j++) {
-				if (merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText.match(/Transport van/)) {
-					var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-					var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
-					var modification = {
-						time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-						resources: []
-					};
-					var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
-					for (var k=0; k<resourceImages.length; k++)
-						modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
+				var description = merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText;
+				var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+				var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
+				var modification = {
+					time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+					resources: []
+				};
+				var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
+				for (var k=0; k<resourceImages.length; k++)
+					modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
+				if (description.match(/Transport van/)) {
 					self.modifications.push(modification);
+				} else if (description.match(/Transport naar/)) {
+				} else if (description.match(/Terugkeer van/)) {
+					var repeatElements = rows[1].getElementsByClassName("repeat");
+					if (repeatElements.length > 0) {
+						var repeatCount = parseInt(repeatElements[0].innerText.replace("x", ""));
+						var negativeModification = modification;
+						for (var k=0; k<resourceImages.length; k++)
+							negativeModification.resources[k] = -modification.resources[k];
+						self.modifications.push(negativeModification);
+						//Add modification to other party at a later time
+						//if (repeatCount > 2) {
+						//Add negativeModification to self at a later time
+						//Add modification to other party at a later time
+					}
 				}
 			}
 			self.graphs.ready(self, "marketplace");
