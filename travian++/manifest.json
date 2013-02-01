@@ -1,6 +1,6 @@
 {
 	"name": "travian++",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"update_url": "https://dl.dropbox.com/s/y5w7f8wjgf28zcu/updates.xml?dl=1",
 	"manifest_version": 2,
 	"description": "Google Chrome Extension for Travian",
