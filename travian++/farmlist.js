@@ -161,12 +161,16 @@ function dorf3Row(row) {
 			//Building icon
 			var buildingContract = this.response.getElementById("building_contract");
 			if (buildingContract) {
-				buildingCell.innerHTML =
-					"<a href=\"" + href + "\">" +
-						"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
-						buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText +
-						"\">" +
-					"</a>";
+				var buildingIcons = "";
+				var buildingRows = buildingContract.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+				for (var i=0; i<buildingRows.length; i++)
+					buildingIcons +=
+						"<a href=\"" + href + "\">" +
+							"<img class=\"bau\" src=\"img/x.gif\" alt=\"" +
+							buildingRows[i].getElementsByTagName("td")[1].innerText +
+							"\">" +
+						"</a>";
+				buildingCell.innerHTML = buildingIcons;
 				time = parseTime(this.response.getElementById("timer1").innerText);
 				if (time < timeout)
 					timeout = time;
