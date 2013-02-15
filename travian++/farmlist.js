@@ -207,6 +207,15 @@ function max(x,y) {
 		return x;
 }
 
+function dToXY(d) {
+	var coord;
+	coord.y = Math.round((320801 - d)/801);
+	coord.x = d - 320801 + 801*coord.y;
+	if (coord.x < -400 || coord.x > 400 || coord.y < -400 || coord.y > 400) //For debugging purposes only
+		console.log("Calculated wrong coordinate (" + coord.x + "," + coord.y + ")");
+	return coord;
+}
+
 function getURLAttribute(name, url) {
 	var attributes = url.substr(url.indexOf("?")+1).split("&");
 	var result;
