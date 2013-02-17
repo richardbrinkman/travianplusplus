@@ -208,7 +208,7 @@ function max(x,y) {
 }
 
 function dToXY(d) {
-	var coord;
+	var coord = {};
 	coord.y = Math.round((320801 - d)/801);
 	coord.x = d - 320801 + 801*coord.y;
 	if (coord.x < -400 || coord.x > 400 || coord.y < -400 || coord.y > 400) //For debugging purposes only
@@ -244,6 +244,15 @@ GraphCollection.prototype.add = function(graph) {
 		marketplace: false,
 		meetingplace: false
 	});
+};
+
+GraphCollection.prototype.getGraphByName = function(name) {
+	var result = null;
+	this.graphs.forEach(function(graph) {
+		if (graph.name == name)
+			result = graph;
+	});
+	return result;
 };
 
 GraphCollection.prototype.ready = function(graph, pageType) {
@@ -401,38 +410,62 @@ Graph.prototype.loadMarketplace = function() {
 			//Parse market place
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 			for (var j=0; j<merchantsOnTheWay.length; j++) {
-				var description = merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1].innerText;
+				var header = merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1];
+				var description = header.innerText;
 				var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 				var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
 				var modification = {
-					time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-					resources: []
-				};
+						time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+						resources: []
+					};
 				var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
 				for (var k=0; k<resourceImages.length; k++)
 					modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
 				var repeatElements = rows[1].getElementsByClassName("repeat");
-				var repeatCount = repeatElements.length > 0 ? parseInt(repeatElements[0].innerText.replace("x", "")) : 0;
+				var repeatCount = repeatElements.length > 0 ? parseInt(repeatElements[0].innerText.replace("x", "")) : 1;
 				if (repeatCount > 0) {
 					var tribeIcon = document.getElementsByClassName("nationBig")[0];
-					var merchantSpeed = tribeIcon.className.indexOf("nationBig1")>0 ? 16 : //roman
-					                    tribeIcon.className.indexOf("nationBig2")>0 ? 12 : //teuton
+					var merchantSpeed = tribeIcon.className.indexOf("nationBig1")>0 ? 16: //roman
+					                    tribeIcon.className.indexOf("nationBig2")>0 ? 12: //teuton
 															                                              24;  //gaul
+					var headerLinks = header.getElementsByTagName("a");
+					var otherVillageCoords = dToXY(parseInt(getURLAttribute("d", headerLinks[headerLinks.length-1].getAttribute("href"))));
+					var distance = Math.sqrt((self.x-otherVillageCoords.x)*(self.x-otherVillageCoords.x) + (self.y-otherVillageCoords.y)*(self.y-otherVillageCoords.y));
+					var elapsedTime = distance / merchantSpeed;
+					var newModification = function(sign, lapse) {
+						var result = {
+							time: modification.time + elapsedTime * lapse,
+							resources: []
+						};
+						for (var k=0; k<4; k++)
+							result.resources[k] = sign * modification.resources[k];
+						return result;
+					};
 				}
 				if (description.match(/Transport van/)) {
-					self.modifications.push(modification);
+					switch (repeatCount) {
+						case 3: self.modifications.push(newModification(+1, 4));
+						case 2: self.modifications.push(newModification(+1, 2));
+						case 1: self.modifications.push(newModification(+1, 0));
+					}
 				} else if (description.match(/Transport naar/)) {
-					//Is already handeled by other village
+					switch (repeatCount) {
+						case 3: self.modifications.push(newModification(-1, 3));
+						case 2: self.modifications.push(newModification(-1, 1));
+						case 1: //Already handled							
+					}
 				} else if (description.match(/Terugkeer van/)) {
-					if (repeatCount > 0) {
-						var negativeModification = modification;
-						for (var k=0; k<resourceImages.length; k++)
-							negativeModification.resources[k] = -modification.resources[k];
-						self.modifications.push(negativeModification);
-						//Add modification to other party at a later time
-						//if (repeatCount > 2) {
-						//Add negativeModification to self at a later time
-						//Add modification to other party at a later time
+					var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1]);
+					switch (repeatCount) {
+						case 3:
+							if (otherVillage)
+								otherVillage.modifications.push(newModification(+1, 3));
+							self.modification.push(newModification(-1, 2));
+						case 2: 
+							if (otherVillage)
+								otherVillage.modifications.push(newModification(+1, 1));
+							self.modifications.push(newModification(-1, 0));
+						case 1: //Merchant is done
 					}
 				}
 			}
@@ -580,38 +613,41 @@ function addgraphtab() {
 		var bordermargin = 5;
 		var hours = 24;
 
+		var graphs = new GraphCollection(hours, width, height, bordermargin);
+		var villageListLinks = document.getElementById("villageListLinks").getElementsByClassName("entry");
+		//Iterate over all the villages
+		for (i=0; i < villageListLinks.length; i++) (function(villageLink, graph) {
+			//Add village name as header
+			var villageHeader = document.createElement("h5");
+			graph.name = villageLink.innerText;
+			graph.newdid = getURLAttribute("newdid", villageLink.getAttribute("href"));
+			villageHeader.innerText=villageLink.innerText;
+			content.insertBefore(villageHeader, cleardiv);
+			
+			//Place empty svg
+			graph.setSVG();
+			content.insertBefore(graph.svg, cleardiv);
+		})(villageListLinks[i].getElementsByTagName("a")[0], new Graph(graphs));
+
 		//Load village coordinates
 		var spieler = new XMLHttpRequest();
 		spieler.responseType = "document";
 		spieler.onreadystatechange = function() {
 			if (this.readyState == 4) { //finished loading the spieler
-				var graphs = new GraphCollection(hours, width, height, bordermargin);
 				var villages = this.response.getElementById("villages").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-				var villageListLinks = document.getElementById("villageListLinks").getElementsByClassName("entry");
-
-				//Iterate over all the villages
-				for (i=0; i < villages.length; i++) (function(village, villageLink, graph) {
-					//Add village name as header
-					var villageHeader = document.createElement("h5");
-					graph.name = villageLink.innerText;
-					graph.x = parseInt(village.getElementsByClassName("coordinateX")[0].innerText.substr(1));
-					var yStr = village.getElementsByClassName("coordinateY")[0].innerText;
+				for (var k=0; k<villages.length; k++) {
+					var graph = graphs.getGraphByName(villages[k].getElementsByTagName("a")[0].innerText);
+					graph.x = parseInt(villages[k].getElementsByClassName("coordinateX")[0].innerText.substr(1));
+					var yStr = villages[k].getElementsByClassName("coordinateY")[0].innerText;
 					graph.y = parseInt(yStr.substr(0, yStr.length-1));
-					graph.newdid = getURLAttribute("newdid", villageLink.getAttribute("href"));
-					villageHeader.innerText=villageLink.innerText;
-					content.insertBefore(villageHeader, cleardiv);
-					
-					//Place empty svg
-					graph.setSVG();
 					graph.loadDorf1();
 					graph.loadDorf2();
-					content.insertBefore(graph.svg, cleardiv);
-				})(villages[i], villageListLinks[i].getElementsByTagName("a")[0], new Graph(graphs));
-			}
+				}
 			}
 		};
 		spieler.open("GET", document.getElementsByClassName("sideInfoPlayer")[0].getElementsByTagName("a")[0].getAttribute("href"), true);
 		spieler.send();
+	}
 }
 
 var uri = document.documentURI;
