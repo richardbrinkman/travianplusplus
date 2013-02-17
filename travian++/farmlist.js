@@ -263,6 +263,9 @@ function Graph(graphs) {
 	this.graphs = graphs;
 	this.svg = null;
 	this.newdid = null;
+	this.name = null;
+	this.x = 0;
+	this.y = 0;
 	this.wood = null;
 	this.clay = null;
 	this.iron = null;
@@ -565,32 +568,44 @@ function addgraphtab() {
 			null
 		).iterateNext();
 		
-		var villageList=document.getElementById("villageListLinks");
-		var villages=villageList.getElementsByTagName("li");
-
 		//Define dimensions
 		var height = 300;
 		var width = 520;
 		var bordermargin = 5;
 		var hours = 24;
 
-		//Iterate over all the villages
-		var graphs = new GraphCollection(hours, width, height, bordermargin);
-		for (i=0; i < villages.length; i++) (function(village, graph) {
-			//Add village name as header
-			var villageHeader = document.createElement("h5");
-			var villageLink = village.getElementsByTagName("a")[0];
-			graph.newdid = getURLAttribute("newdid", villageLink.getAttribute("href"));
-			villageHeader.innerText=villageLink.innerText;
-			content.insertBefore(villageHeader, cleardiv);
-			
-			//Place empty svg
-			graph.setSVG();
-			graph.loadDorf1();
-			graph.loadDorf2();
-			content.insertBefore(graph.svg, cleardiv);
-		})(villages[i], new Graph(graphs));
-	}
+		//Load village coordinates
+		var spieler = new XMLHttpRequest();
+		spieler.responseType = "document";
+		spieler.onreadystatechange = function() {
+			if (this.readyState == 4) { //finished loading the spieler
+				var graphs = new GraphCollection(hours, width, height, bordermargin);
+				var villages = this.response.getElementById("villages").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+				var villageListLinks = document.getElementById("villageListLinks").getElementsByClassName("entry");
+
+				//Iterate over all the villages
+				for (i=0; i < villages.length; i++) (function(village, villageLink, graph) {
+					//Add village name as header
+					var villageHeader = document.createElement("h5");
+					graph.name = villageLink.innerText;
+					graph.x = parseInt(village.getElementsByClassName("coordinateX")[0].innerText.substr(1));
+					var yStr = village.getElementsByClassName("coordinateY")[0].innerText;
+					graph.y = parseInt(yStr.substr(0, yStr.length-1));
+					graph.newdid = getURLAttribute("newdid", villageLink.getAttribute("href"));
+					villageHeader.innerText=villageLink.innerText;
+					content.insertBefore(villageHeader, cleardiv);
+					
+					//Place empty svg
+					graph.setSVG();
+					graph.loadDorf1();
+					graph.loadDorf2();
+					content.insertBefore(graph.svg, cleardiv);
+				})(villages[i], villageListLinks[i].getElementsByTagName("a")[0], new Graph(graphs));
+			}
+			}
+		};
+		spieler.open("GET", document.getElementsByClassName("sideInfoPlayer")[0].getElementsByTagName("a")[0].getAttribute("href"), true);
+		spieler.send();
 }
 
 var uri = document.documentURI;
