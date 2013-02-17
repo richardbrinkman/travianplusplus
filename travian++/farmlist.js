@@ -455,7 +455,7 @@ Graph.prototype.loadMarketplace = function() {
 						case 1: //Already handled							
 					}
 				} else if (description.match(/Terugkeer van/)) {
-					var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1]);
+					var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1].innerText);
 					switch (repeatCount) {
 						case 3:
 							if (otherVillage)
