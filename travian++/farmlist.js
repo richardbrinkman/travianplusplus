@@ -460,7 +460,7 @@ Graph.prototype.loadMarketplace = function() {
 						case 3:
 							if (otherVillage)
 								otherVillage.modifications.push(newModification(+1, 3));
-							self.modification.push(newModification(-1, 2));
+							self.modifications.push(newModification(-1, 2));
 						case 2: 
 							if (otherVillage)
 								otherVillage.modifications.push(newModification(+1, 1));
