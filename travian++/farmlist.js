@@ -411,13 +411,20 @@ Graph.prototype.loadMarketplace = function() {
 				var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
 				for (var k=0; k<resourceImages.length; k++)
 					modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
+				var repeatElements = rows[1].getElementsByClassName("repeat");
+				var repeatCount = repeatElements.length > 0 ? parseInt(repeatElements[0].innerText.replace("x", "")) : 0;
+				if (repeatCount > 0) {
+					var tribeIcon = document.getElementsByClassName("nationBig")[0];
+					var merchantSpeed = tribeIcon.className.indexOf("nationBig1")>0 ? 16 : //roman
+					                    tribeIcon.className.indexOf("nationBig2")>0 ? 12 : //teuton
+															                                              24;  //gaul
+				}
 				if (description.match(/Transport van/)) {
 					self.modifications.push(modification);
 				} else if (description.match(/Transport naar/)) {
+					//Is already handeled by other village
 				} else if (description.match(/Terugkeer van/)) {
-					var repeatElements = rows[1].getElementsByClassName("repeat");
-					if (repeatElements.length > 0) {
-						var repeatCount = parseInt(repeatElements[0].innerText.replace("x", ""));
+					if (repeatCount > 0) {
 						var negativeModification = modification;
 						for (var k=0; k<resourceImages.length; k++)
 							negativeModification.resources[k] = -modification.resources[k];
@@ -511,7 +518,6 @@ Graph.prototype.drawResourceLevels = function() {
 					path += " L" + this.translate.x(time) + " " + this.translate.y(level);
 				}
 			}
-		//path += " l" + this.translate.dx(this.graphs.hours-time) + " " + this.translate.dy((this.graphs.hours-time)*resources[j].growth); //Endpoint
 		line.setAttribute("d", path);
 		this.svg.appendChild(line);
 	}
