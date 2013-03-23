@@ -242,6 +242,7 @@ GraphCollection.prototype.add = function(graph) {
 		sender: graph,
 		dorf1: false,
 		marketplace: false,
+		merchantroute: false,
 		meetingplace: false
 	});
 };
@@ -260,7 +261,7 @@ GraphCollection.prototype.ready = function(graph, pageType) {
 	this.states.forEach(function(state) {
 		if (state.sender == graph)
 			state[pageType] = true;
-		everythingReady = everythingReady && state.dorf1 && state.marketplace && state.meetingplace;
+		everythingReady = everythingReady && state.dorf1 && state.marketplace && state.merchantroute && state.meetingplace;
 	});
 	if (everythingReady)
 		this.graphs.forEach(function(graph) {
@@ -389,8 +390,10 @@ Graph.prototype.loadDorf2 = function() {
 			}
 			if (self.marketHref)
 				self.loadMarketplace();
-			else
+			else {
 				self.graphs.ready(self, "marketplace");
+				self.graphs.ready(self, "merchantroute");
+			}
 			if (self.meetingplaceHref)
 				self.loadMeetingplace(1);
 			else
@@ -401,7 +404,7 @@ Graph.prototype.loadDorf2 = function() {
 	request.send();
 };
 
-Graph.prototype.loadMarketplace = function() {
+Graph.prototype.loadMerchantsOnTheWay = function() {
 	var self = this;
 	var market = new XMLHttpRequest();
 	market.responseType = "document";
@@ -427,7 +430,7 @@ Graph.prototype.loadMarketplace = function() {
 					var tribeIcon = document.getElementsByClassName("nationBig")[0];
 					var merchantSpeed = tribeIcon.className.indexOf("nationBig1")>0 ? 16: //roman
 					                    tribeIcon.className.indexOf("nationBig2")>0 ? 12: //teuton
-															                                              24;  //gaul
+															                                              24; //gaul
 					var headerLinks = header.getElementsByTagName("a");
 					var otherVillageCoords = dToXY(parseInt(getURLAttribute("d", headerLinks[headerLinks.length-1].getAttribute("href"))));
 					var distance = Math.sqrt((self.x-otherVillageCoords.x)*(self.x-otherVillageCoords.x) + (self.y-otherVillageCoords.y)*(self.y-otherVillageCoords.y));
@@ -474,6 +477,70 @@ Graph.prototype.loadMarketplace = function() {
 	};
 	market.open("GET", this.marketHref + "&t=5&newdid=" + this.newdid, true);
 	market.send();
+};
+
+Graph.prototype.loadMerchantRoutes = function() {
+	var self = this;
+	var market = new XMLHttpRequest();
+	market.responseType = "document";
+	market.onreadystatechange = function () {
+		if (this.readyState == 4) { //finished loading the market place
+			var tribeIcon = document.getElementsByClassName("nationBig")[0];
+			var merchantSpeed = tribeIcon.className.indexOf("nationBig1")>0 ? 16: //roman
+													tribeIcon.className.indexOf("nationBig2")>0 ? 12: //teuton
+																																				24; //gaul
+			var serverTime = document.getElementById("tp1").innerText.split(":");
+
+			//Parse market place
+			var routes = this.response.getElementById("trading_routes").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+			for (var i=0; i<routes.length; i++) {
+				var desc = routes[i].getElementsByClassName("desc")[0];
+				if (desc) { //There exists merchant routes
+					var toNewDid = parseInt(getURLAttribute("newdid", desc.getElementsByTagName("a")[0].getAttribute("href")));
+					var otherVillage;
+					self.graphs.graphs.forEach(function(graph) {
+						if (graph.newdid == toNewDid) 
+							otherVillage = graph;
+					});
+					var distance = Math.sqrt((self.x-otherVillage.x)*(self.x-otherVillage.x) + (self.y-otherVillage.y)*(self.y-otherVillage.y));
+					var elapsedTime = distance / merchantSpeed;
+					var hour = parseInt(routes[i].getElementsByClassName("start")[0].innerText);
+					var starts = (hour-serverTime[0]) - serverTime[1]/60 - serverTime[2]/3600;
+					if (starts < 0)
+						starts += 24;
+					var modification = {
+						time: starts + elapsedTime,
+						resources: []
+					};
+					var costs = routes[i].getElementsByClassName("showCosts")[0].getElementsByTagName("img");
+					for (var j=0; j<costs.length; j++)
+						modification.resources[j] = parseInt(costs[j].nextSibling.nodeValue);
+					var newModification = function(sign, lapse) {
+						var result = {
+							time: modification.time + elapsedTime * lapse,
+							resources: []
+						};
+						for (var k=0; k<4; k++)
+							result.resources[k] = sign * modification.resources[k];
+						return result;
+					};
+					var repeatCount = parseInt(routes[i].getElementsByClassName("trad")[0].innerText.split("x")[0]);
+					for (var j=0; j<repeatCount; j++) {
+						self.modifications.push(newModification(-1, 2*j));
+						otherVillage.modifications.push(newModification(1, 2*j));
+					}
+				}
+			}
+			self.graphs.ready(self, "merchantroute");
+		}
+	};
+	market.open("GET", this.marketHref + "&t=0&newdid=" + this.newdid, true);
+	market.send();
+};
+
+Graph.prototype.loadMarketplace = function() {
+	this.loadMerchantsOnTheWay();
+	this.loadMerchantRoutes();
 };
 
 Graph.prototype.loadMeetingplace = function(page) {
