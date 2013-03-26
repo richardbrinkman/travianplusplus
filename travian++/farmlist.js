@@ -492,42 +492,45 @@ Graph.prototype.loadMerchantRoutes = function() {
 			var serverTime = document.getElementById("tp1").innerText.split(":");
 
 			//Parse market place
-			var routes = this.response.getElementById("trading_routes").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-			for (var i=0; i<routes.length; i++) {
-				var desc = routes[i].getElementsByClassName("desc")[0];
-				if (desc) { //There exists merchant routes
-					var toNewDid = parseInt(getURLAttribute("newdid", desc.getElementsByTagName("a")[0].getAttribute("href")));
-					var otherVillage;
-					self.graphs.graphs.forEach(function(graph) {
-						if (graph.newdid == toNewDid) 
-							otherVillage = graph;
-					});
-					var distance = Math.sqrt((self.x-otherVillage.x)*(self.x-otherVillage.x) + (self.y-otherVillage.y)*(self.y-otherVillage.y));
-					var elapsedTime = distance / merchantSpeed;
-					var hour = parseInt(routes[i].getElementsByClassName("start")[0].innerText);
-					var starts = (hour-serverTime[0]) - serverTime[1]/60 - serverTime[2]/3600;
-					if (starts < 0)
-						starts += 24;
-					var modification = {
-						time: starts + elapsedTime,
-						resources: []
-					};
-					var costs = routes[i].getElementsByClassName("showCosts")[0].getElementsByTagName("img");
-					for (var j=0; j<costs.length; j++)
-						modification.resources[j] = parseInt(costs[j].nextSibling.nodeValue);
-					var newModification = function(sign, lapse) {
-						var result = {
-							time: modification.time + elapsedTime * lapse,
+			var tradingRoutes = this.response.getElementById("trading_routes");
+			if (tradingRoutes) {
+				var routes = tradingRoutes.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+				for (var i=0; i<routes.length; i++) {
+					var desc = routes[i].getElementsByClassName("desc")[0];
+					if (desc) { //There exists merchant routes
+						var toNewDid = parseInt(getURLAttribute("newdid", desc.getElementsByTagName("a")[0].getAttribute("href")));
+						var otherVillage;
+						self.graphs.graphs.forEach(function(graph) {
+							if (graph.newdid == toNewDid) 
+								otherVillage = graph;
+						});
+						var distance = Math.sqrt((self.x-otherVillage.x)*(self.x-otherVillage.x) + (self.y-otherVillage.y)*(self.y-otherVillage.y));
+						var elapsedTime = distance / merchantSpeed;
+						var hour = parseInt(routes[i].getElementsByClassName("start")[0].innerText);
+						var starts = (hour-serverTime[0]) - serverTime[1]/60 - serverTime[2]/3600;
+						if (starts < 0)
+							starts += 24;
+						var modification = {
+							time: starts + elapsedTime,
 							resources: []
 						};
-						for (var k=0; k<4; k++)
-							result.resources[k] = sign * modification.resources[k];
-						return result;
-					};
-					var repeatCount = parseInt(routes[i].getElementsByClassName("trad")[0].innerText.split("x")[0]);
-					for (var j=0; j<repeatCount; j++) {
-						self.modifications.push(newModification(-1, 2*j));
-						otherVillage.modifications.push(newModification(1, 2*j));
+						var costs = routes[i].getElementsByClassName("showCosts")[0].getElementsByTagName("img");
+						for (var j=0; j<costs.length; j++)
+							modification.resources[j] = parseInt(costs[j].nextSibling.nodeValue);
+						var newModification = function(sign, lapse) {
+							var result = {
+								time: modification.time + elapsedTime * lapse,
+								resources: []
+							};
+							for (var k=0; k<4; k++)
+								result.resources[k] = sign * modification.resources[k];
+							return result;
+						};
+						var repeatCount = parseInt(routes[i].getElementsByClassName("trad")[0].innerText.split("x")[0]);
+						for (var j=0; j<repeatCount; j++) {
+							self.modifications.push(newModification(-1, 2*j));
+							otherVillage.modifications.push(newModification(1, 2*j));
+						}
 					}
 				}
 			}
