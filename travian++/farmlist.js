@@ -345,18 +345,6 @@ Graph.prototype.loadDorf1 = function() {
 				}
 			};
 											
-			//Draw resource capacity line
-			var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-			resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 0,10,10,0");
-			resourceCapacityLine.setAttribute("d", "M" + self.graphs.bordermargin + " " + self.translate.y(self.resourceCapacity) + " l" + self.graphs.width + " 0");
-			self.svg.appendChild(resourceCapacityLine);
-			
-			//Draw crop capacity line
-			var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
-			cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
-			cropCapacityLine.setAttribute("d", "M" + self.graphs.bordermargin + " " + self.translate.y(self.cropCapacity) + " l" + self.graphs.width + " 0");
-			self.svg.appendChild(cropCapacityLine);
-
 			//Draw axes
 			var group=document.createElementNS("http://www.w3.org/2000/svg","g");
 			group.setAttribute("id","axis");
@@ -611,6 +599,18 @@ Graph.prototype.loadMeetingplace = function(page) {
 };
 
 Graph.prototype.drawResourceLevels = function() {
+	//Draw resource capacity line
+	var resourceCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+	resourceCapacityLine.setAttribute("style", "stroke:brown; stroke-width:2; fill: none; stroke-dasharray: 0,10,10,0");
+	resourceCapacityLine.setAttribute("d", "M" + this.graphs.bordermargin + " " + this.translate.y(this.resourceCapacity) + " l" + this.graphs.width + " 0");
+	this.svg.appendChild(resourceCapacityLine);
+	
+	//Draw crop capacity line
+	var cropCapacityLine=document.createElementNS("http://www.w3.org/2000/svg","path");
+	cropCapacityLine.setAttribute("style", "stroke:yellow; stroke-width:2; fill: none; stroke-dasharray: 10,10");
+	cropCapacityLine.setAttribute("d", "M" + this.graphs.bordermargin + " " + this.translate.y(this.cropCapacity) + " l" + this.graphs.width + " 0");
+	this.svg.appendChild(cropCapacityLine);
+
 	//Draw projected resource levels
 	var resources = [
 		{resource: "wood", level: parseInt(this.wood[0]), growth: parseInt(this.woodProduction), color: "green", capacity: this.resourceCapacity},
