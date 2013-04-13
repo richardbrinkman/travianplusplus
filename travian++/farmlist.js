@@ -451,7 +451,7 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 						case 1: self.modifications.push(newModification(+1, 0));
 					}
 				} else {
-					var numberOfMerchants = Math.round(totalResources / self.merchantCapacity + 0.5);
+					var numberOfMerchants = Math.ceil(totalResources / self.merchantCapacity);
 					var merchantsBack;
 					if (description.match(/Transport naar/)) {
 						merchantsBack = modification.time + (2*(repeatCount-1)+1)*elapsedTime;
