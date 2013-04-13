@@ -293,6 +293,7 @@ function Graph(graphs) {
 	this.meetingplaceHref = null;
 	this.modifications = [];
 	this.maxMerchants = 0;
+	this.merchantCapacity = 0;
 	this.merchants = [];
 	graphs.add(this);
 }
@@ -415,8 +416,9 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 		if (this.readyState == 4) { //finished loading the market place
 			//Parse market place
 			var merchantsAvailable = this.response.getElementById("merchantsAvailable");
-			self.merchants[0] = {time: 0, amount: parseInt(merchantsAvailable.innerText)};
+			self.merchants[0] = {time: 0, delta: parseInt(merchantsAvailable.innerText)};
 			self.maxMerchants = parseInt(merchantsAvailable.nextSibling.nodeValue.substr(3));
+			self.merchantCapacity = parseInt(this.response.getElementsByClassName("carry")[0].getElementsByTagName("b")[0].innerText);
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 			for (var j=0; j<merchantsOnTheWay.length; j++) {
 				var header = merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1];
@@ -428,8 +430,11 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 						resources: []
 					};
 				var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
-				for (var k=0; k<resourceImages.length; k++)
+				var totalResources = 0;
+				for (var k=0; k<resourceImages.length; k++) {
 					modification.resources[k] = parseInt(resourceImages[k].nextSibling.nodeValue);
+					totalResources += modification.resources[k];
+				}
 				var repeatElements = rows[1].getElementsByClassName("repeat");
 				var repeatCount = repeatElements.length > 0 ? parseInt(repeatElements[0].innerText.replace("x", "")) : 1;
 				if (repeatCount > 0) {
@@ -451,32 +456,41 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 						return result;
 					};
 				}
+				var numberOfMerchants = 0;
+				var merchantsBack;
 				if (description.match(/Transport van/)) {
 					switch (repeatCount) {
 						case 3: self.modifications.push(newModification(+1, 4));
 						case 2: self.modifications.push(newModification(+1, 2));
 						case 1: self.modifications.push(newModification(+1, 0));
 					}
-				} else if (description.match(/Transport naar/)) {
-					switch (repeatCount) {
-						case 3: self.modifications.push(newModification(-1, 3));
-						case 2: self.modifications.push(newModification(-1, 1));
-						case 1: //Already handled							
-					}
-				} else if (description.match(/Terugkeer van/)) {
-					var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1].innerText);
-					switch (repeatCount) {
-						case 3:
-							if (otherVillage)
-								otherVillage.modifications.push(newModification(+1, 3));
-							self.modifications.push(newModification(-1, 2));
-						case 2: 
-							if (otherVillage)
-								otherVillage.modifications.push(newModification(+1, 1));
-							self.modifications.push(newModification(-1, 0));
-						case 1: //Merchant is done
+				} else {
+					numberOfMerchants = Math.round(totalResources / self.merchantCapacity + 0.5);
+					if (description.match(/Transport naar/)) {
+						merchantsBack = modification.time + (2*(repeatCount-1)+1)*elapsedTime;
+						switch (repeatCount) {
+							case 3: self.modifications.push(newModification(-1, 3));
+							case 2: self.modifications.push(newModification(-1, 1));
+							case 1: //already handled
+						}
+					} else if (description.match(/Terugkeer van/)) {
+						merchantsBack = modification.time + 2*(repeatCount-1)*elapsedTime;
+						var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1].innerText);
+						switch (repeatCount) {
+							case 3:
+								if (otherVillage)
+									otherVillage.modifications.push(newModification(+1, 3));
+								self.modifications.push(newModification(-1, 2));
+							case 2: 
+								if (otherVillage)
+									otherVillage.modifications.push(newModification(+1, 1));
+								self.modifications.push(newModification(-1, 0));
+							case 1: //Merchant is done
+						}
 					}
 				}
+				if (numberOfMerchants > 0)
+					self.merchants.push({time: merchantsBack, delta: numberOfMerchants});
 			}
 			self.graphs.ready(self, "marketplace");
 		}
@@ -532,11 +546,21 @@ Graph.prototype.loadMerchantRoutes = function() {
 								result.resources[k] = sign * modification.resources[k];
 							return result;
 						};
-						var repeatCount = parseInt(routes[i].getElementsByClassName("trad")[0].innerText.split("x")[0]);
+						var trad = routes[i].getElementsByClassName("trad")[0].innerText.split("x");
+						var repeatCount = parseInt(trad[0]);
+						var numberOfMerchants = parseInt(trad[1]);
 						for (var j=0; j<repeatCount; j++) {
 							self.modifications.push(newModification(-1, 2*j));
 							otherVillage.modifications.push(newModification(1, 2*j));
 						}
+						self.merchants.push({
+							time: modification.time,
+							delta: -numberOfMerchants
+						});
+						self.merchants.push({
+							time: modification.time + 2*repeatCount*elapsedTime,
+							delta: numberOfMerchants
+						});
 					}
 				}
 			}
@@ -644,6 +668,29 @@ Graph.prototype.drawMerchants = function() {
 	axis.setAttribute("d", "M" + parseInt(this.graphs.width + this.graphs.bordermargin) + " 0 l0 " + this.graphs.height + ticks);
 	group.appendChild(axis);
 	this.svg.appendChild(group);
+	
+	//Draw available merchants
+	this.merchants.push({
+		time: this.graphs.hours,
+		delta: 0
+	});
+	this.merchants.sort(function(a,b) {return a.time-b.time});
+	var line=document.createElementNS("http://www.w3.org/2000/svg","path");
+	line.setAttribute("style", "stroke-width:2; fill: none; stroke: blue");
+	var level = this.merchants[0].delta;
+	var path = "M" + this.graphs.bordermargin + " " + parseInt(this.graphs.height - level*this.graphs.height/this.maxMerchants); //Startpoint
+	for(var k=1; k<this.merchants.length; k++)
+		if (this.merchants[k].time <= this.graphs.hours) {
+			path += " L" + this.translate.x(this.merchants[k].time) + " " + parseInt(this.graphs.height - level*this.graphs.height/this.maxMerchants);
+			level += this.merchants[k].delta;
+			if (level < 0) 
+				level = 0;
+			if (level > this.maxMerchants) 
+				level = this.maxMerchants;
+			path += " L" + this.translate.x(this.merchants[k].time) + " " + parseInt(this.graphs.height - level*this.graphs.height/this.maxMerchants);
+		}
+	line.setAttribute("d", path);
+	this.svg.appendChild(line);
 };
 
 function addgraphtab() {
