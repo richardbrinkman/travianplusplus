@@ -265,6 +265,7 @@ GraphCollection.prototype.ready = function(graph, pageType) {
 	});
 	if (everythingReady)
 		this.graphs.forEach(function(graph) {
+			graph.drawMerchants();
 			graph.drawResourceLevels();
 		});
 };
@@ -291,6 +292,8 @@ function Graph(graphs) {
 	this.marketHref = null;
 	this.meetingplaceHref = null;
 	this.modifications = [];
+	this.maxMerchants = 0;
+	this.merchants = [];
 	graphs.add(this);
 }
 
@@ -411,6 +414,9 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 	market.onreadystatechange = function () {
 		if (this.readyState == 4) { //finished loading the market place
 			//Parse market place
+			var merchantsAvailable = this.response.getElementById("merchantsAvailable");
+			self.merchants[0] = {time: 0, amount: parseInt(merchantsAvailable.innerText)};
+			self.maxMerchants = parseInt(merchantsAvailable.nextSibling.nodeValue.substr(3));
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
 			for (var j=0; j<merchantsOnTheWay.length; j++) {
 				var header = merchantsOnTheWay[j].getElementsByTagName("thead")[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[1];
@@ -624,6 +630,20 @@ Graph.prototype.drawResourceLevels = function() {
 		line.setAttribute("d", path);
 		this.svg.appendChild(line);
 	}
+};
+
+Graph.prototype.drawMerchants = function() {
+	//Draw axes
+	var group=document.createElementNS("http://www.w3.org/2000/svg","g");
+	group.setAttribute("id","rightaxis");
+	group.setAttribute("style", "fill:none; stroke:blue; stroke-width:3");
+	var axis=document.createElementNS("http://www.w3.org/2000/svg","path");
+	var ticks = "";
+	for (var j=0; j<this.maxMerchants; j++)
+		ticks += " M " + parseInt(this.graphs.width + this.graphs.bordermargin) + " " + parseInt(this.graphs.height/this.maxMerchants*j) + " l-" + this.graphs.bordermargin + " 0";
+	axis.setAttribute("d", "M" + parseInt(this.graphs.width + this.graphs.bordermargin) + " 0 l0 " + this.graphs.height + ticks);
+	group.appendChild(axis);
+	this.svg.appendChild(group);
 };
 
 function addgraphtab() {
