@@ -444,8 +444,6 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 						return result;
 					};
 				}
-				var numberOfMerchants = 0;
-				var merchantsBack;
 				if (description.match(/Transport van/)) {
 					switch (repeatCount) {
 						case 3: self.modifications.push(newModification(+1, 4));
@@ -453,7 +451,8 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 						case 1: self.modifications.push(newModification(+1, 0));
 					}
 				} else {
-					numberOfMerchants = Math.round(totalResources / self.merchantCapacity + 0.5);
+					var numberOfMerchants = Math.round(totalResources / self.merchantCapacity + 0.5);
+					var merchantsBack;
 					if (description.match(/Transport naar/)) {
 						merchantsBack = modification.time + (2*(repeatCount-1)+1)*elapsedTime;
 						switch (repeatCount) {
@@ -476,9 +475,8 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 							case 1: //Merchant is done
 						}
 					}
-				}
-				if (numberOfMerchants > 0)
 					self.merchants.push({time: merchantsBack, delta: numberOfMerchants});
+				}
 			}
 			self.graphs.ready(self, "marketplace");
 		}
@@ -519,7 +517,7 @@ Graph.prototype.loadMerchantRoutes = function() {
 						if (starts < 0)
 							starts += 24;
 						var modification = {
-							time: starts + elapsedTime,
+							time: starts,
 							resources: []
 						};
 						var costs = routes[i].getElementsByClassName("showCosts")[0].getElementsByTagName("img");
