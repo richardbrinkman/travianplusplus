@@ -289,6 +289,7 @@ GraphCollection.prototype.checkBoundary = function() {
 
 	//Check whether enough merchants are available
 	this.graphs.forEach(function(village) {
+		village.availableMerchants = 0;
 		village.merchants.forEach(function(merchant) {
 			if (village.availableMerchants < -merchant.delta) {
 				var transportSum = 0;
