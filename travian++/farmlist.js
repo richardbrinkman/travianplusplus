@@ -263,12 +263,122 @@ GraphCollection.prototype.ready = function(graph, pageType) {
 			state[pageType] = true;
 		everythingReady = everythingReady && state.dorf1 && state.marketplace && state.merchantroute && state.meetingplace;
 	});
-	if (everythingReady)
+	if (everythingReady) {
+		this.checkBoundary();
 		this.graphs.forEach(function(graph) {
 			graph.drawMerchants();
 			graph.drawResourceLevels();
 		});
+	}
 };
+
+GraphCollection.prototype.checkBoundary = function() {
+	this.graphs.forEach(function(graph) {
+		graph.modifications.push({
+			type: modificationType.graphBoundary,
+			time: graph.graphs.hours,
+			resources: [0,0,0,0]
+		});
+		graph.modifications.sort(function(a,b) {return a.time-b.time});
+		graph.merchants.push({
+			time: graph.graphs.hours,
+			delta: 0
+		});
+		graph.merchants.sort(function(a,b) {return a.time-b.time});
+	});
+
+	//Check whether enough merchants are available
+	this.graphs.forEach(function(village) {
+		village.merchants.forEach(function(merchant) {
+			if (village.availableMerchants < -merchant.delta) {
+				var transportSum = 0;
+				for (var j=0; j<merchant.routes[0].resources.length; j++)
+					transportSum += merchant.routes[0].resources[j];
+				merchant.routes.forEach(function(mod) {
+					for (var j=0; j<mod.resources.length; j++)
+						mod.resources[j] = Math.floor(-mod.resources[j]/transportSum*village.availableMerchants*village.merchantCapacity);
+					mod.other.forEach(function(modification) {
+						for (var j=0; j<modification.resources.length; j++)
+							modification.resources[j] = -mod.resources[j];
+					});
+				});
+				merchant.delta = -village.availableMerchants;
+				merchant.other.delta = village.availableMerchants;
+			}
+			village.availableMerchants += merchant.delta;
+		});
+	});
+
+	var time = 0;
+	for (i=0; i<this.graphs.length; i++) {
+		var village = this.graphs[i];
+		village.atModification = this.graphs[i].modifications.length > 0 ? 0 : Number.MAX_VALUE;
+		village.resources = [
+			{
+				level: parseInt(this.graphs[i].wood[0]), 
+				growth: this.graphs[i].woodProduction, 
+				capacity: this.graphs[i].resourceCapacity
+			},
+			{
+				level: parseInt(this.graphs[i].clay[0]), 
+				growth: this.graphs[i].clayProduction, 
+				capacity: this.graphs[i].resourceCapacity
+			},
+			{
+				level: parseInt(this.graphs[i].iron[0]), 
+				growth: this.graphs[i].ironProduction, 
+				capacity: this.graphs[i].resourceCapacity
+			},
+			{
+				level: parseInt(this.graphs[i].crop[0]), 
+				growth: this.graphs[i].cropProduction, 
+				capacity: this.graphs[i].cropCapacity
+			}
+		];
+	}
+			
+	while (time <= this.hours) {
+		//Find next interesting time
+		var village = null;
+		var timeToNextEvent = Number.MAX_VALUE;
+		for (var i=0; i<this.graphs.length; i++)
+			if (   this.graphs[i].atModification < this.graphs[i].modifications.length
+			    && this.graphs[i].modifications[this.graphs[i].atModification].time - time < timeToNextEvent) {
+				village = this.graphs[i];
+				timeToNextEvent = this.graphs[i].modifications[this.graphs[i].atModification].time - time;
+			}
+
+		if (village) {
+			var mod = village.modifications[village.atModification];
+			var transportSum = 0;
+			for (var j=0; j<village.resources.length; j++) {
+				transportSum += mod.resources[j];
+				var level = village.resources[j].level;
+				if (mod.time <= this.graphs.hours) {
+					level += village.resources[j].growth * (mod.time-time);
+					level = level < 0 ? 0 : (level > village.resources[j].capacity ? village.resources[j].capacity : level);
+					if (level + mod.resources[j] < 0) { //repeated merchant or merchant route with too litle resources in stock
+						mod.resources[j] = level;
+						mod.other.forEach(function(modification) {
+							modification.resources[j] = level;
+						});
+					}
+				}
+			}
+
+			time = mod.time;
+			village.atModification++;
+		} else //if (village)
+			time = this.hours + 1; //stop condition
+	}
+};
+
+var modificationType = Object.freeze({
+	walkingMerchant: 0,
+	merchantRoute: 1,
+	incomingTroops: 2,
+	graphBoundary: 3
+});
 
 function Graph(graphs) {
 	this.graphs = graphs;
@@ -324,10 +434,10 @@ Graph.prototype.loadDorf1 = function() {
 
 			//Get production
 			var production = this.response.getElementById("production").getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-			self.woodProduction = production[0].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-			self.clayProduction = production[1].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-			self.ironProduction = production[2].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
-			self.cropProduction = production[3].getElementsByTagName("td")[2].innerText.replace(/\s/g, "");
+			self.woodProduction = parseInt(production[0].getElementsByTagName("td")[2].innerText.replace(/\s/g, ""));
+			self.clayProduction = parseInt(production[1].getElementsByTagName("td")[2].innerText.replace(/\s/g, ""));
+			self.ironProduction = parseInt(production[2].getElementsByTagName("td")[2].innerText.replace(/\s/g, ""));
+			self.cropProduction = parseInt(production[3].getElementsByTagName("td")[2].innerText.replace(/\s/g, ""));
 
 			//Define translate object
 			self.translate = {
@@ -404,7 +514,8 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 		if (this.readyState == 4) { //finished loading the market place
 			//Parse market place
 			var merchantsAvailable = this.response.getElementById("merchantsAvailable");
-			self.merchants[0] = {time: 0, delta: parseInt(merchantsAvailable.innerText)};
+			self.availableMerchants = parseInt(merchantsAvailable.innerText);
+			self.merchants[0] = {time: 0, delta: self.availableMerchants};
 			self.maxMerchants = parseInt(merchantsAvailable.nextSibling.nodeValue.substr(3));
 			self.merchantCapacity = parseInt(this.response.getElementsByClassName("carry")[0].getElementsByTagName("b")[0].innerText);
 			var merchantsOnTheWay = this.response.getElementById("merchantsOnTheWay").getElementsByTagName("table");
@@ -414,9 +525,11 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 				var rows = merchantsOnTheWay[j].getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 				var arrivalTime = rows[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
 				var modification = {
-						time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-						resources: []
-					};
+					type: modificationType.walkingMerchant,
+					time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
+					resources: [],
+					other: []
+				};
 				var resourceImages = rows[1].getElementsByTagName("td")[0].getElementsByTagName("span")[0].getElementsByTagName("img");
 				var totalResources = 0;
 				for (var k=0; k<resourceImages.length; k++) {
@@ -436,42 +549,70 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 					var elapsedTime = distance / merchantSpeed;
 					var newModification = function(sign, lapse) {
 						var result = {
+							type: modificationType.walkingMerchant,
 							time: modification.time + elapsedTime * lapse,
-							resources: []
+							resources: [],
+							other: []
 						};
 						for (var k=0; k<4; k++)
 							result.resources[k] = sign * modification.resources[k];
 						return result;
 					};
 				}
+				var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1].innerText);
 				if (description.match(/Transport van/)) {
-					switch (repeatCount) {
-						case 3: self.modifications.push(newModification(+1, 4));
-						case 2: self.modifications.push(newModification(+1, 2));
-						case 1: self.modifications.push(newModification(+1, 0));
-					}
+					if (!otherVillage) //Incoming merchants from your own village are handled in "Transport to" section of the other village
+						switch (repeatCount) {
+							case 3: self.modifications.push(newModification(+1, 4));
+							case 2: self.modifications.push(newModification(+1, 2));
+							case 1: self.modifications.push(newModification(+1, 0));
+						}
 				} else {
 					var numberOfMerchants = Math.ceil(totalResources / self.merchantCapacity);
 					var merchantsBack;
 					if (description.match(/Transport naar/)) {
 						merchantsBack = modification.time + (2*(repeatCount-1)+1)*elapsedTime;
 						switch (repeatCount) {
-							case 3: self.modifications.push(newModification(-1, 3));
-							case 2: self.modifications.push(newModification(-1, 1));
-							case 1: //already handled
+							case 3: 
+								var thirdModification = newModification(-1, 3);
+								var thirdOtherModification = newModification(+1, 4);
+								thirdModification.other.push(thirdOtherModification);
+								if (otherVillage)
+									otherVillage.modifications.push(thirdOtherModification);
+								self.modifications.push(thirdModification);
+							case 2: 
+								var thisModification = newModification(-1, 1);
+								var otherModification = newModification(+1, 2);
+								thisModification.other.push(otherModification);
+								if (repeatCount == 3)
+									thisModification.other.push(thirdOtherModification);
+								if (otherVillage)
+									otherVillage.modifications.push(otherModification);
+								self.modifications.push(thisModification);
+							case 1: 
+								if (otherVillage)
+									otherVillage.modifications.push(newModification(+1, 0));
 						}
 					} else if (description.match(/Terugkeer van/)) {
 						merchantsBack = modification.time + 2*(repeatCount-1)*elapsedTime;
-						var otherVillage = self.graphs.getGraphByName(headerLinks[headerLinks.length-1].innerText);
 						switch (repeatCount) {
 							case 3:
-								if (otherVillage)
-									otherVillage.modifications.push(newModification(+1, 3));
-								self.modifications.push(newModification(-1, 2));
+								var thirdModification = newModification(-1, 2);
+								if (otherVillage) {
+									var thirdOtherModification = newModification(+1, 3);
+									otherVillage.modifications.push(thirdOtherModification);
+									thirdModification.other.push(thirdOtherModification);
+								}
 							case 2: 
-								if (otherVillage)
-									otherVillage.modifications.push(newModification(+1, 1));
-								self.modifications.push(newModification(-1, 0));
+								var thisModification = newModification(-1, 0);
+								if (otherVillage) {
+									var otherModification = newModification(+1, 1);
+									otherVillage.modifications.push(otherModification);
+									if (repeatCount == 3)
+										thisModification.other.push(thirdOtherModification);
+									thisModification.other.push(otherModification);
+								}
+								self.modifications.push(thisModification);
 							case 1: //Merchant is done
 						}
 					}
@@ -517,16 +658,20 @@ Graph.prototype.loadMerchantRoutes = function() {
 						if (starts < 0)
 							starts += 24;
 						var modification = {
+							type: modificationType.merchantRoute,
 							time: starts,
-							resources: []
+							resources: [],
+							other: []
 						};
 						var costs = routes[i].getElementsByClassName("showCosts")[0].getElementsByTagName("img");
 						for (var j=0; j<costs.length; j++)
 							modification.resources[j] = parseInt(costs[j].nextSibling.nodeValue);
 						var newModification = function(sign, lapse) {
 							var result = {
+								type: modificationType.merchantRoute,
 								time: modification.time + elapsedTime * lapse,
-								resources: []
+								resources: [],
+								other: []
 							};
 							for (var k=0; k<4; k++)
 								result.resources[k] = sign * modification.resources[k];
@@ -535,18 +680,30 @@ Graph.prototype.loadMerchantRoutes = function() {
 						var trad = routes[i].getElementsByClassName("trad")[0].innerText.split("x");
 						var repeatCount = parseInt(trad[0]);
 						var numberOfMerchants = parseInt(trad[1]);
-						for (var j=0; j<repeatCount; j++) {
-							self.modifications.push(newModification(-1, 2*j));
-							otherVillage.modifications.push(newModification(1, 2*j));
+						var allOthers = [];
+						var allRoutes = [];
+						for (var j=repeatCount-1; j>=0; j--) {
+							var thisModification = newModification(-1, 2*j);
+							var otherModification = newModification(1, 2*j + 1);
+							allOthers.push(otherModification);
+							otherVillage.modifications.push(otherModification);
+							allOthers.forEach(function(modification) {
+								thisModification.other.push(modification);
+							});
+							allRoutes.push(thisModification);
+							self.modifications.push(thisModification);
 						}
-						self.merchants.push({
-							time: modification.time,
-							delta: -numberOfMerchants
-						});
-						self.merchants.push({
+						var otherMerchant = {
 							time: modification.time + 2*repeatCount*elapsedTime,
 							delta: numberOfMerchants
+						};
+						self.merchants.push({
+							time: modification.time,
+							delta: -numberOfMerchants,
+							routes: allRoutes,
+							other: otherMerchant
 						});
+						self.merchants.push(otherMerchant);
 					}
 				}
 			}
@@ -577,8 +734,10 @@ Graph.prototype.loadMeetingplace = function(page) {
 						var arrivalTime = infos[1].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span")[0].innerText.split(":");
 						var carriedResources = infos[0].getElementsByTagName("tr")[0].getElementsByTagName("td")[0].getElementsByTagName("div")[0].getElementsByTagName("span");
 						var modification = {
+							type: modificationType.incomingTroops,
 							time: parseInt(arrivalTime[0]) + parseInt(arrivalTime[1])/60 + parseInt(arrivalTime[2])/3600,
-							resources: []
+							resources: [],
+							other: []
 						}
 						for (var k=0; k<carriedResources.length; k++)
 							modification.resources[k] = parseInt(carriedResources[k].getElementsByTagName("img")[0].nextSibling.nodeValue);
@@ -611,16 +770,11 @@ Graph.prototype.drawResourceLevels = function() {
 
 	//Draw projected resource levels
 	var resources = [
-		{resource: "wood", level: parseInt(this.wood[0]), growth: parseInt(this.woodProduction), color: "green", capacity: this.resourceCapacity},
-		{resource: "clay", level: parseInt(this.clay[0]), growth: parseInt(this.clayProduction), color: "red", capacity: this.resourceCapacity},
-		{resource: "iron", level: parseInt(this.iron[0]), growth: parseInt(this.ironProduction), color: "gray", capacity: this.resourceCapacity},
-		{resource: "crop", level: parseInt(this.crop[0]), growth: parseInt(this.cropProduction), color: "yellow", capacity: this.cropCapacity}
+		{resource: "wood", level: parseInt(this.wood[0]), growth: this.woodProduction, color: "green", capacity: this.resourceCapacity},
+		{resource: "clay", level: parseInt(this.clay[0]), growth: this.clayProduction, color: "red", capacity: this.resourceCapacity},
+		{resource: "iron", level: parseInt(this.iron[0]), growth: this.ironProduction, color: "gray", capacity: this.resourceCapacity},
+		{resource: "crop", level: parseInt(this.crop[0]), growth: this.cropProduction, color: "yellow", capacity: this.cropCapacity}
 	];
-	this.modifications.push({
-		time: this.graphs.hours,
-		resources: [0,0,0,0]
-	});
-	this.modifications.sort(function(a,b) {return a.time-b.time});
 	for (var j=0; j<resources.length; j++) {
 		var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 		line.setAttribute("style", "stroke-width:2; fill: none; stroke: " + resources[j].color);
@@ -668,11 +822,6 @@ Graph.prototype.drawMerchants = function() {
 	this.svg.appendChild(group);
 	
 	//Draw available merchants
-	this.merchants.push({
-		time: this.graphs.hours,
-		delta: 0
-	});
-	this.merchants.sort(function(a,b) {return a.time-b.time});
 	var line=document.createElementNS("http://www.w3.org/2000/svg","path");
 	line.setAttribute("style", "stroke-width:2; fill: none; stroke: blue");
 	var level = this.merchants[0].delta;
