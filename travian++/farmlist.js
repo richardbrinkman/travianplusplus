@@ -1,3 +1,29 @@
+var execQueue = {
+	idle: true,
+	queue: [],
+
+	add: function(f) {
+		this.queue.push(f);
+		console.log(execQueue.queue.length);
+		if (this.idle)
+			this.next();
+	},
+
+	next: function() {
+		this.idle = false;
+		setTimeout(function() {
+			execQueue.queue.shift().send();
+			console.log(execQueue.queue.length);
+		}, 1000 * Math.random());
+	},
+
+	ready: function() {
+		this.idle = this.queue.length == 0;
+		if (!this.idle)
+			this.next();
+	}
+};
+
 function delfarm(e) {
 	chrome.storage.sync.get(null, function(db) {
 		if (!db)
@@ -183,10 +209,11 @@ function dorf3Row(row) {
 						location.reload();
 					};
 				}(row), timeout+1000);
+			execQueue.ready();
 		}
 	};
 	request.open("GET", href, true);
-	request.send();
+	execQueue.add(request);
 }
 
 function dorf3() {
@@ -470,11 +497,12 @@ Graph.prototype.loadDorf1 = function() {
 			axis.setAttribute("d", "M" + self.graphs.bordermargin + " 0 l0 " + self.graphs.height + " l" + self.graphs.width + " 0 " + ticks);
 			group.appendChild(axis);
 			self.svg.appendChild(group);
+			execQueue.ready();
+			self.graphs.ready(self, "dorf1");
 		}
-		self.graphs.ready(self, "dorf1");
 	}
 	request.open("GET", "dorf1.php?newdid=" + this.newdid, true);
-	request.send();
+	execQueue.add(request);
 };
 
 Graph.prototype.loadDorf2 = function() {
@@ -491,6 +519,7 @@ Graph.prototype.loadDorf2 = function() {
 				else if (buildings[i].getAttribute("alt").match(/Verzamelplaats/))
 					self.meetingplaceHref = buildings[i].getAttribute("href");
 			}
+			execQueue.ready();
 			if (self.marketHref)
 				self.loadMarketplace();
 			else {
@@ -504,7 +533,7 @@ Graph.prototype.loadDorf2 = function() {
 		}
 	};
 	request.open("GET", "dorf2.php?newdid=" + this.newdid, true);
-	request.send();
+	execQueue.add(request);
 };
 
 Graph.prototype.loadMerchantsOnTheWay = function() {
@@ -620,11 +649,12 @@ Graph.prototype.loadMerchantsOnTheWay = function() {
 					self.merchants.push({time: merchantsBack, delta: numberOfMerchants});
 				}
 			}
+			execQueue.ready();
 			self.graphs.ready(self, "marketplace");
 		}
 	};
 	market.open("GET", this.marketHref + "&t=5&newdid=" + this.newdid, true);
-	market.send();
+	execQueue.add(market);
 };
 
 Graph.prototype.loadMerchantRoutes = function() {
@@ -708,11 +738,12 @@ Graph.prototype.loadMerchantRoutes = function() {
 					}
 				}
 			}
+			execQueue.ready();
 			self.graphs.ready(self, "merchantroute");
 		}
 	};
 	market.open("GET", this.marketHref + "&t=0&newdid=" + this.newdid, true);
-	market.send();
+	execQueue.add(market);
 };
 
 Graph.prototype.loadMarketplace = function() {
@@ -745,6 +776,7 @@ Graph.prototype.loadMeetingplace = function(page) {
 						self.modifications.push(modification);
 					};
 				}
+			execQueue.ready();
 			var next = this.response.getElementsByClassName("next")[0];
 			if (next && next.tagName == "A") 
 				self.loadMeetingplace(getURLAttribute("page", next.getAttribute("href")));
@@ -753,7 +785,7 @@ Graph.prototype.loadMeetingplace = function(page) {
 		}
 	};
 	meetingplace.open("GET", this.meetingplaceHref + "&filter=1&tt=1&newdid=" + this.newdid + "&page=" + page, true);
-	meetingplace.send();
+	execQueue.add(meetingplace);
 };
 
 Graph.prototype.drawResourceLevels = function() {
@@ -928,10 +960,11 @@ function addgraphtab() {
 					graph.loadDorf1();
 					graph.loadDorf2();
 				}
+				execQueue.ready();
 			}
 		};
 		spieler.open("GET", document.getElementsByClassName("sideInfoPlayer")[0].getElementsByTagName("a")[0].getAttribute("href"), true);
-		spieler.send();
+		execQueue.add(spieler);
 	}
 }
 
