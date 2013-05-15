@@ -14,7 +14,7 @@ var execQueue = {
 		setTimeout(function() {
 			execQueue.queue.shift().send();
 			console.log(execQueue.queue.length);
-		}, 1000 * Math.random());
+		}, 500 * Math.random());
 	},
 
 	ready: function() {
