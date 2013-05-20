@@ -4,16 +4,20 @@ var execQueue = {
 
 	add: function(f) {
 		this.queue.push(f);
-		console.log(execQueue.queue.length);
+		var progressbar = document.getElementById("progressbar");
+		if (progressbar)
+			progressbar.setAttribute("max", parseInt(progressbar.getAttribute("max"))+1);
 		if (this.idle)
 			this.next();
 	},
 
 	next: function() {
 		this.idle = false;
+		var progressbar = document.getElementById("progressbar");
+		if (progressbar)
+			progressbar.setAttribute("value", parseInt(progressbar.getAttribute("value"))+1);
 		setTimeout(function() {
 			execQueue.queue.shift().send();
-			console.log(execQueue.queue.length);
 		}, 500 * Math.random());
 	},
 
@@ -910,7 +914,13 @@ function addgraphtab() {
 
 		//Set the header
 		var content=document.getElementById("content");
-		content.getElementsByTagName("h4")[0].innerText="Grondstoffen grafiekjes";
+		var header = content.getElementsByTagName("h4")[0];
+		header.innerText="Grondstoffen grafiekjes";
+		var progressbar = document.createElement("progress");
+		progressbar.setAttribute("id", "progressbar");
+		progressbar.setAttribute("value", 0);
+		progressbar.setAttribute("max", 0);
+		content.insertBefore(progressbar, header.nextSibling);
 
 		//Remove the content
 		content.removeChild(document.getElementById("player"));
